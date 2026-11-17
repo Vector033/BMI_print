@@ -5,11 +5,11 @@ debug_tags.py
 patch_index.py
 save_slip.py
 update_preview.py
-build_*.py
 test_*.py
 
-# Keep server.py for optional local offline usage
+# Keep core scripts for offline usage and maintenance
 !server.py
+!build_refined_app.py
 
 # Temp files
 *.csv

@@ -1,0 +1,1709 @@
+import base64
+
+with open('logo_base64.txt', 'r', encoding='utf-8') as f:
+    logo_b64 = f.read().strip()
+
+html_code = f'''<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบพิมพ์ใบรายงานผลการทดสอบสมรรถภาพทางกาย (A5) | โรงเรียนพระหฤทัยเชียงใหม่</title>
+  
+  <!-- Modern Clean Typography (Prompt for UI Headings, Sarabun for Content) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Offline-First Libraries -->
+  <script src="lib/xlsx.full.min.js"></script>
+  <script src="lib/jszip.min.js"></script>
+  <script src="lib/FileSaver.min.js"></script>
+  <script src="lib/html2canvas.min.js"></script>
+  <script src="lib/jspdf.umd.min.js"></script>
+
+  <style>
+    /* ========================================================
+       DESIGN SYSTEM (Linear / Vercel Precision Architecture)
+       60% Quiet Canvas | 30% Structure & Ink | 10% Intentional Accent
+       ======================================================== */
+    :root {{
+      --canvas: #f8fafc;
+      --surface: #ffffff;
+      --surface-subtle: #f1f5f9;
+      --border-hairline: #e2e8f0;
+      --border-focus: #2563eb;
+      --ink-primary: #0f172a;
+      --ink-secondary: #475569;
+      --ink-muted: #64748b;
+      --ink-subtle: #94a3b8;
+      
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-subtle: #eff6ff;
+      
+      --radius-lg: 12px;
+      --radius-md: 8px;
+      --radius-sm: 6px;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --shadow-paper: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+
+      --ease-tactile: cubic-bezier(0.16, 1, 0.3, 1);
+    }}
+
+    * {{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }}
+
+    body {{
+      font-family: 'Sarabun', sans-serif;
+      background-color: var(--canvas);
+      color: var(--ink-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }}
+
+    /* Tabular numbers for clean numeric vertical alignment */
+    .num-tabular {{
+      font-variant-numeric: tabular-nums;
+    }}
+
+    /* Global Navigation Bar */
+    .top-nav {{
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-hairline);
+      padding: 10px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-sm);
+    }}
+    .nav-brand {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }}
+    .brand-crest {{
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+    }}
+    .brand-meta {{
+      display: flex;
+      flex-direction: column;
+    }}
+    .brand-title {{
+      font-family: 'Prompt', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink-primary);
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+    }}
+    .brand-sub {{
+      font-size: 11.5px;
+      color: var(--ink-muted);
+      line-height: 1.3;
+    }}
+
+    .nav-actions {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }}
+    .chip-badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-secondary);
+      font-variant-numeric: tabular-nums;
+    }}
+
+    /* App Workspace 2-Column Layout */
+    .workspace {{
+      max-width: 1440px;
+      margin: 20px auto;
+      padding: 0 20px 40px;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 20px;
+      align-items: start;
+    }}
+
+    @media (max-width: 1120px) {{
+      .workspace {{
+        grid-template-columns: 1fr;
+      }}
+      .right-panel {{
+        position: static !important;
+      }}
+    }}
+
+    /* Clean Linear-style Cards */
+    .panel-card {{
+      background: var(--surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 16px;
+    }}
+    .panel-header {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }}
+    .panel-title {{
+      font-family: 'Prompt', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+    .panel-title svg {{
+      color: var(--ink-muted);
+      flex-shrink: 0;
+    }}
+
+    /* Form Fields & Controls */
+    .form-group {{
+      margin-bottom: 12px;
+    }}
+    .form-label {{
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-secondary);
+      margin-bottom: 5px;
+    }}
+    .input-field {{
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--ink-primary);
+      outline: none;
+      transition: all 0.15s var(--ease-tactile);
+    }}
+    .input-field:focus {{
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }}
+
+    /* Buttons with Tactile Feedback */
+    .btn {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Prompt', sans-serif;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s var(--ease-tactile);
+      user-select: none;
+      line-height: 1.25;
+    }}
+    .btn:active {{
+      transform: scale(0.98);
+    }}
+    .btn-primary {{
+      background: var(--ink-primary);
+      color: #ffffff;
+      border-color: var(--ink-primary);
+    }}
+    .btn-primary:hover {{
+      background: #1e293b;
+      border-color: #1e293b;
+    }}
+    .btn-accent {{
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }}
+    .btn-accent:hover {{
+      background: var(--accent-hover);
+    }}
+    .btn-secondary {{
+      background: var(--surface);
+      border-color: var(--border-hairline);
+      color: var(--ink-primary);
+    }}
+    .btn-secondary:hover {{
+      background: var(--surface-subtle);
+      border-color: #cbd5e1;
+    }}
+    .btn-sm {{
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: var(--radius-sm);
+    }}
+
+    /* Dropzone (Refined Minimalist) */
+    .file-dropzone {{
+      border: 1.5px dashed #cbd5e1;
+      background: #fafafa;
+      border-radius: var(--radius-md);
+      padding: 18px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s var(--ease-tactile);
+    }}
+    .file-dropzone:hover, .file-dropzone.dragover {{
+      border-color: var(--accent);
+      background: var(--accent-subtle);
+    }}
+    .dropzone-label {{
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-primary);
+      margin-top: 4px;
+    }}
+    .dropzone-hint {{
+      font-size: 11px;
+      color: var(--ink-muted);
+    }}
+
+    /* Student List & Search */
+    .table-scroll {{
+      max-height: 440px;
+      overflow-y: auto;
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+    }}
+    .data-table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      text-align: left;
+    }}
+    .data-table th {{
+      background: var(--surface-subtle);
+      padding: 8px 10px;
+      font-weight: 600;
+      color: var(--ink-secondary);
+      border-bottom: 1px solid var(--border-hairline);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }}
+    .data-table td {{
+      padding: 7px 10px;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--ink-primary);
+    }}
+    .data-table tr:hover {{
+      background: #f8fafc;
+    }}
+    .data-table tr.active {{
+      background: #f0f7ff;
+      font-weight: 600;
+    }}
+
+    /* Paper Mode Toggle Segmented Control */
+    .segmented-control {{
+      display: flex;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 3px;
+      margin-bottom: 14px;
+    }}
+    .segment-btn {{
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
+      font-family: 'Prompt', sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--ink-secondary);
+      cursor: pointer;
+      transition: all 0.15s var(--ease-tactile);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }}
+    .segment-btn.active {{
+      background: var(--surface);
+      color: var(--ink-primary);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }}
+
+    /* Action Bar above Preview */
+    .action-bar {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-hairline);
+    }}
+    .action-group {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+
+    /* Sticky Right Panel */
+    .right-panel {{
+      position: sticky;
+      top: 75px;
+    }}
+
+    /* Preview Canvas Area */
+    .preview-canvas {{
+      background: #e2e8f0;
+      padding: 24px;
+      border-radius: var(--radius-md);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      overflow-x: auto;
+    }}
+
+    /* ========================================================
+       THE A5 SLIP (Precision Monochrome Approved Design)
+       ======================================================== */
+    .a5-slip {{
+      width: 210mm;
+      min-height: 148mm;
+      background: #ffffff;
+      padding: 10mm 13mm 9mm;
+      box-shadow: var(--shadow-paper);
+      border-radius: 3px;
+      box-sizing: border-box;
+      color: #000000;
+      font-family: 'Sarabun', sans-serif;
+      position: relative;
+    }}
+
+    .slip-header {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 9px;
+    }}
+    .slip-crest {{
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }}
+    .slip-title-box {{
+      text-align: center;
+    }}
+    .slip-main-title {{
+      font-size: 18.5px;
+      font-weight: 700;
+      color: #000000;
+      line-height: 1.2;
+    }}
+    .slip-sub-title {{
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #222222;
+      margin-top: 2px;
+    }}
+
+    /* Clean white info box */
+    .student-info-box {{
+      border: 1.5px solid #000000;
+      border-radius: 4px;
+      padding: 6px 12px;
+      margin-bottom: 8px;
+      background: #ffffff;
+      font-size: 13.5px;
+    }}
+    .info-row {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }}
+    .info-row + .info-row {{
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px dashed #aaaaaa;
+    }}
+    .info-val {{
+      font-weight: 700;
+      color: #000000;
+    }}
+    .checkbox-box {{
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+    }}
+    .check-mark {{
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 1px solid #000000;
+      line-height: 12px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: bold;
+      vertical-align: middle;
+      border-radius: 2px;
+    }}
+
+    /* High-Contrast B&W Table */
+    .slip-table {{
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      border: 1.5px solid #000000;
+      margin-bottom: 6px;
+    }}
+    .slip-table th, .slip-table td {{
+      border: 1px solid #000000;
+      padding: 4px 1px;
+      font-size: 11px;
+      line-height: 1.25;
+      color: #000000;
+    }}
+    .cell-label {{
+      background-color: #ebebeb !important;
+      font-weight: 700 !important;
+      color: #000000 !important;
+    }}
+    .cell-data {{
+      background-color: #ffffff !important;
+    }}
+    .th-unit {{
+      font-weight: 400;
+      font-size: 9.5px;
+      color: #333333;
+    }}
+    .test-val {{
+      font-size: 14px;
+      font-weight: 700;
+      color: #000000;
+    }}
+    .score-badge {{
+      display: inline-block;
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 1px 3px;
+      border: 1px solid #777777;
+      border-radius: 3px;
+      background: #fafafa;
+      white-space: nowrap;
+      letter-spacing: -0.01em;
+    }}
+    .border-top-thick td {{
+      border-top: 2px solid #000000 !important;
+    }}
+
+    .bottom-row {{
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 5px;
+      padding-top: 3px;
+    }}
+    .footer-text {{
+      font-size: 10px;
+      color: #333333;
+      line-height: 1.35;
+    }}
+    .legend-box {{
+      border: 1.5px solid #000000;
+      border-radius: 3px;
+      padding: 3px 7px;
+      font-size: 10px;
+      background: #ffffff;
+      white-space: nowrap;
+      text-align: left;
+    }}
+    .legend-title {{
+      font-weight: 700;
+      margin-bottom: 1px;
+    }}
+
+    /* Progress Modal */
+    .modal-backdrop {{
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }}
+    .modal-backdrop.active {{
+      display: flex;
+    }}
+    .modal-dialog {{
+      background: var(--surface);
+      border: 1px solid var(--border-hairline);
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      width: 400px;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+    }}
+    .progress-track {{
+      width: 100%;
+      height: 8px;
+      background: var(--surface-subtle);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 16px 0 8px;
+    }}
+    .progress-fill {{
+      height: 100%;
+      width: 0%;
+      background: var(--ink-primary);
+      transition: width 0.15s ease;
+    }}
+
+    /* Hidden Batch Print Output */
+    #print-container {{
+      display: none;
+    }}
+
+    /* Print Styles */
+    @media print {{
+      @page {{
+        size: A4 portrait;
+        margin: 0;
+      }}
+      html, body {{
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 210mm !important;
+        height: auto !important;
+        min-height: auto !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }}
+      .no-print, .top-nav, .workspace, .modal-backdrop {{
+        display: none !important;
+      }}
+      #print-container {{
+        display: block !important;
+        width: 210mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+      }}
+      .print-page-a4 {{
+        width: 210mm !important;
+        height: 290mm !important;
+        max-height: 290mm !important;
+        box-sizing: border-box !important;
+        padding: 6mm 12mm !important;
+        margin: 0 auto !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        overflow: hidden !important;
+      }}
+      .print-page-a4:last-child {{
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }}
+      .print-half-slip {{
+        height: 135mm !important;
+        max-height: 135mm !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+      }}
+      .print-cut-line {{
+        border-top: 1px dashed #888888 !important;
+        height: 0 !important;
+        margin: 2mm 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }}
+      .print-cut-line::before {{
+        display: none !important;
+        content: none !important;
+      }}
+      .print-page-a5 {{
+        width: 210mm !important;
+        height: 142mm !important;
+        max-height: 142mm !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        box-sizing: border-box !important;
+        padding: 6mm 12mm !important;
+        margin: 0 auto !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+      }}
+      .print-page-a5:last-child {{
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }}
+      #print-container .a5-slip {{
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: auto !important;
+        height: auto !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+      }}
+    }}
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="top-nav no-print">
+    <div class="nav-brand">
+      <img class="brand-crest" src="data:image/png;base64,{logo_b64}" alt="ตราโรงเรียน">
+      <div class="brand-meta">
+        <h1 class="brand-title">ระบบพิมพ์ใบรายงานสมรรถภาพทางกาย</h1>
+        <p class="brand-sub">โรงเรียนพระหฤทัยเชียงใหม่ &bull; ขนาด A5 รายบุคคล</p>
+      </div>
+    </div>
+    
+    <div class="nav-actions">
+      <div class="chip-badge">
+        <span>นักเรียน:</span>
+        <span id="header-student-count" class="num-tabular">0 คน</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="loadSampleData()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        โหลดข้อมูลตัวอย่าง ม.4/1
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace Container -->
+  <main class="workspace no-print">
+    
+    <!-- LEFT PANEL: DATA INGESTION & SELECTION -->
+    <div class="left-panel">
+      
+      <!-- Import Card -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+            นำเข้าข้อมูล (Import)
+          </h2>
+        </div>
+        
+        <!-- Google Sheet URL Input -->
+        <div class="form-group">
+          <label class="form-label" for="sheet-url">ลิงก์ Google Sheets:</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="sheet-url" class="input-field" 
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+              value="https://docs.google.com/spreadsheets/d/1TngCWO0Is24LydPGHIR0KBZ1suHKnQYKNQ-CDzYFVSg/edit?usp=sharing">
+            <button class="btn btn-accent" onclick="fetchGoogleSheet()" style="white-space: nowrap;">
+              ดึงข้อมูล
+            </button>
+          </div>
+          <p style="font-size: 11px; color: var(--ink-muted); margin-top: 4px;">
+            * รองรับทั้งลิงก์สาธารณะและสิทธิ์ "ทุกคนที่มีลิงก์มีสิทธิ์ดู"
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 12px 0 10px; font-size: 11.5px; color: var(--ink-muted); position: relative;">
+          <span style="background: var(--surface); padding: 0 8px; position: relative; z-index: 1;">หรือ อัปโหลดไฟล์</span>
+          <hr style="border: 0; border-top: 1px solid var(--border-hairline); position: absolute; top: 50%; width: 100%; margin: 0;">
+        </div>
+
+        <!-- Excel Dropzone -->
+        <div class="file-dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 4px;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>
+          <div class="dropzone-label">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวาง</div>
+          <div class="dropzone-hint">รองรับไฟล์ .xlsx, .xls หรือ .csv</div>
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display: none;" onchange="handleFileSelect(event)">
+        </div>
+      </section>
+
+      <!-- Document Metadata Card -->
+      <section class="panel-card" style="padding: 14px 18px;">
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px;">
+          <div>
+            <label class="form-label">ชื่อสถานศึกษา:</label>
+            <input type="text" id="meta-school" class="input-field" style="font-size: 12px; padding: 6px 10px;" value="โรงเรียนพระหฤทัยเชียงใหม่" oninput="updateCurrentSlip()">
+          </div>
+          <div>
+            <label class="form-label">ระดับชั้น / ห้อง:</label>
+            <input type="text" id="meta-class" class="input-field" style="font-size: 12px; padding: 6px 10px;" value="ม.4/1" oninput="updateCurrentSlip()">
+          </div>
+        </div>
+      </section>
+
+      <!-- Student Selection Card -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            รายชื่อนักเรียน (<span id="selected-count" class="num-tabular">0</span>/<span id="total-count" class="num-tabular">0</span>)
+          </h2>
+          <div style="display: flex; gap: 4px;">
+            <button class="btn btn-secondary btn-sm" onclick="selectAll(true)" style="padding: 3px 8px; font-size: 11.5px;">เลือกทั้งหมด</button>
+            <button class="btn btn-secondary btn-sm" onclick="selectAll(false)" style="padding: 3px 8px; font-size: 11.5px;">ยกเลิก</button>
+          </div>
+        </div>
+
+        <div style="position: relative; margin-bottom: 10px;">
+          <input type="text" id="search-box" class="input-field" style="padding-left: 30px; font-size: 12px;" placeholder="ค้นหาชื่อ หรือเลขที่..." oninput="filterStudents()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-muted);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 32px; text-align: center;"><input type="checkbox" id="check-all" checked onchange="toggleCheckAll(this.checked)"></th>
+                <th style="width: 44px;" class="num-tabular">เลขที่</th>
+                <th>ชื่อ - นามสกุล</th>
+                <th>เพศ</th>
+                <th style="width: 46px; text-align: center;">ดูใบ A5</th>
+              </tr>
+            </thead>
+            <tbody id="student-tbody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--ink-muted); padding: 24px;">
+                  ยังไม่มีข้อมูลนักเรียน<br>กรุณานำเข้าจาก Google Sheets หรืออัปโหลดไฟล์ Excel
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT PANEL: PREVIEW & BATCH OPERATIONS -->
+    <div class="right-panel">
+      
+      <section class="panel-card" style="padding: 16px 20px;">
+        
+        <!-- Segmented Control for Paper Mode -->
+        <div class="segmented-control">
+          <button class="segment-btn active" id="btn-mode-a4" onclick="setPaperMode('a4')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 12h18"/></svg>
+            กระดาษ A4 (2 ใบ/แผ่น ตัดครึ่ง) &bull; ประหยัด 50%
+          </button>
+          <button class="segment-btn" id="btn-mode-a5" onclick="setPaperMode('a5')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+            กระดาษ A5 (1 ใบ/แผ่น ตรงรุ่น)
+          </button>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="prevStudent()" title="คนก่อนหน้า">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              ก่อนหน้า
+            </button>
+            <span id="preview-current-idx" style="font-size: 12.5px; font-weight: 600; color: var(--ink-secondary); padding: 0 4px;" class="num-tabular">
+              คนปัจจุบัน: 1 / 15
+            </span>
+            <button class="btn btn-secondary btn-sm" onclick="nextStudent()" title="คนถัดไป">
+              ถัดไป
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+
+          <div class="action-group">
+            <button class="btn btn-primary" onclick="printSelectedStudents()" title="พิมพ์นักเรียนที่เลือกทั้งหมด">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+              สั่งพิมพ์ที่เลือก (<span class="btn-selected-num num-tabular">0</span>)
+            </button>
+            <button class="btn btn-secondary" onclick="exportMergedPDF()" title="ดาวน์โหลดเป็นไฟล์ PDF รวมเล่ม">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+              ดาวน์โหลด PDF
+            </button>
+            <button class="btn btn-secondary" onclick="exportImagesZip()" title="ส่งออกเป็นรูปภาพแยกคน (.ZIP)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+              รูปภาพแยกคน (.ZIP)
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Slip Preview Stage -->
+        <div class="preview-canvas">
+          <div id="live-a5-slip" class="a5-slip">
+            
+            <!-- Slip Header -->
+            <div class="slip-header">
+              <img class="slip-crest" src="data:image/png;base64,{logo_b64}" alt="ตราโรงเรียน">
+              <div class="slip-title-box">
+                <div class="slip-main-title">รายงานผลการทดสอบสมรรถภาพทางกาย</div>
+                <div class="slip-sub-title" id="slip-school-class">โรงเรียนพระหฤทัยเชียงใหม่ &bull; ชั้นมัธยมศึกษาปีที่ 4</div>
+              </div>
+            </div>
+
+            <!-- Student Profile Information -->
+            <div class="student-info-box">
+              <div class="info-row">
+                <div>ชื่อ-สกุล: <span class="info-val" id="slip-name">นาย ณฐภัทร วงศ์กลุ่ม</span></div>
+                <div>ชั้น: <span class="info-val" id="slip-class">ม.4/1</span></div>
+                <div>เลขที่: <span class="info-val num-tabular" id="slip-no">1</span></div>
+              </div>
+              <div class="info-row">
+                <div>น้ำหนัก: <span class="info-val num-tabular" id="slip-weight">50</span> กก.</div>
+                <div>ส่วนสูง: <span class="info-val num-tabular" id="slip-height">170</span> ซม.</div>
+                <div>
+                  เพศ: &nbsp;
+                  <span class="checkbox-box" id="slip-gender-male"><span class="check-mark">&#10003;</span> ชาย</span>
+                  &nbsp;&nbsp;
+                  <span class="checkbox-box" id="slip-gender-female" style="color: #777;"><span class="check-mark"></span> หญิง</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 8 Fitness Items Table -->
+            <table class="slip-table">
+              <thead>
+                <tr>
+                  <th class="cell-label" style="width: 8.5%;">แบบ<br>ทดสอบ</th>
+                  <th class="cell-label" style="width: 11.4%;">วิ่งอ้อมหลัก<br><span class="th-unit">(วินาที)</span></th>
+                  <th class="cell-label" style="width: 11.4%;">ดันพื้น 30 วิ<br><span class="th-unit">(ครั้ง)</span></th>
+                  <th class="cell-label" style="width: 11.4%;">ลุกนั่ง 60 วิ<br><span class="th-unit">(ครั้ง)</span></th>
+                  <th class="cell-label" style="width: 11.5%;">งอตัวไปข้างหน้า<br><span class="th-unit">(เซนติเมตร)</span></th>
+                  <th class="cell-label" style="width: 11.4%;">วิ่งเก็บของ<br><span class="th-unit">(วินาที)</span></th>
+                  <th class="cell-label" style="width: 11.4%;">แรงบีบมือ<br><span class="th-unit">(กิโลกรัม)</span></th>
+                  <th class="cell-label" style="width: 11.4%;">วิ่ง 50 เมตร<br><span class="th-unit">(วินาที)</span></th>
+                  <th class="cell-label" style="width: 11.5%;">ยืนกระโดดไกล<br><span class="th-unit">(เซนติเมตร)</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="cell-label">ผลทดสอบ</td>
+                  <td class="cell-data"><div class="test-val num-tabular" id="slip-t1">-</div></td>
+                  <td class="cell-data"><div class="test-val num-tabular" id="slip-t2">-</div></td>
+                  <td class="cell-data"><div class="test-val num-tabular" id="slip-t3">-</div></td>
+                  <td class="cell-data"><div class="test-val num-tabular" id="slip-t4">-</div></td>
+                  <td class="cell-data"><div class="test-val num-tabular" id="slip-t5">-</div></td>
+                  <td class="cell-data"><div class="test-val num-tabular" id="slip-t6">-</div></td>
+                  <td class="cell-data"><div class="test-val num-tabular" id="slip-t7">-</div></td>
+                  <td class="cell-data"><div class="test-val num-tabular" id="slip-t8">-</div></td>
+                </tr>
+                <tr>
+                  <td class="cell-label">คะแนน</td>
+                  <td class="cell-data"><span class="score-badge" id="slip-s1">-</span></td>
+                  <td class="cell-data"><span class="score-badge" id="slip-s2">-</span></td>
+                  <td class="cell-data"><span class="score-badge" id="slip-s3">-</span></td>
+                  <td class="cell-data"><span class="score-badge" id="slip-s4">-</span></td>
+                  <td class="cell-data"><span class="score-badge" id="slip-s5">-</span></td>
+                  <td class="cell-data"><span class="score-badge" id="slip-s6">-</span></td>
+                  <td class="cell-data"><span class="score-badge" id="slip-s7">-</span></td>
+                  <td class="cell-data"><span class="score-badge" id="slip-s8">-</span></td>
+                </tr>
+                <tr class="border-top-thick">
+                  <td class="cell-label">ค่าดัชนีมวลกาย</td>
+                  <td colspan="2" class="cell-data num-tabular" style="font-size: 14px; font-weight: 700;" id="slip-bmi">-</td>
+                  <td colspan="2" class="cell-label">ดัชนีมวลกาย (BMI)</td>
+                  <td class="cell-data" style="font-size: 13.5px; font-weight: 700;" id="slip-bmi-desc">-</td>
+                  <td class="cell-label">สรุปสมรรถภาพ</td>
+                  <td colspan="2" class="cell-data" style="font-size: 13px; font-weight: 700;" id="slip-summary">-</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Slip Footer & Score Scale Legend -->
+            <div class="bottom-row">
+              <div class="footer-text">
+                สมรรถภาพทางกายที่สัมพันธ์กับสุขภาพสำหรับเด็กไทย อายุ 7 – 18 ปี<br>
+                เกณฑ์มาตรฐาน ของ สสส. สำนักงานกองทุนสนับสนุนการสร้างเสริมสุขภาพ
+              </div>
+              <div class="legend-box">
+                <div class="legend-title">เกณฑ์ระดับคะแนน:</div>
+                <div class="num-tabular">5 = ดีมาก &bull; 4 = ดี &bull; 3 = ปานกลาง &bull; 2 = ต่ำ &bull; 1 = ต่ำมาก</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Progress Modal -->
+  <div class="modal-backdrop" id="progress-modal">
+    <div class="modal-dialog">
+      <h3 style="font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 4px;" id="modal-title">กำลังประมวลผล...</h3>
+      <p style="font-size: 12.5px; color: var(--ink-muted);" id="modal-desc">กรุณารอสักครู่ ระบบกำลังเรนเดอร์เอกสาร</p>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-bar"></div>
+      </div>
+      <div style="font-size: 12px; font-weight: 600; color: var(--ink-primary);" id="progress-text" class="num-tabular">0%</div>
+    </div>
+  </div>
+
+  <!-- Print Rendering Output -->
+  <div id="print-container"></div>
+
+  <!-- Application Script -->
+  <script>
+    const SCHOOL_LOGO_BASE64 = "{logo_b64}";
+    let students = [];
+    let currentIndex = 0;
+    let paperMode = "a4";
+
+    function getScoreLabel(score) {{
+      if (score === null || score === undefined || score === "" || score === "-") return "-";
+      const num = parseInt(score, 10);
+      switch(num) {{
+        case 5: return "5 (ดีมาก)";
+        case 4: return "4 (ดี)";
+        case 3: return "3 (ปานกลาง)";
+        case 2: return "2 (ต่ำ)";
+        case 1: return "1 (ต่ำมาก)";
+        default: return num ? String(num) : "-";
+      }}
+    }}
+
+    function detectGender(name) {{
+      const n = (name || "").trim();
+      if (n.startsWith("นางสาว") || n.startsWith("น.ส.") || n.startsWith("ด.ญ.") || n.startsWith("เด็กหญิง") || n.includes("หญิง")) {{
+        return "female";
+      }}
+      return "male";
+    }}
+
+    function setPaperMode(mode) {{
+      paperMode = mode;
+      document.getElementById('btn-mode-a4').classList.toggle('active', mode === 'a4');
+      document.getElementById('btn-mode-a5').classList.toggle('active', mode === 'a5');
+      
+      let pageStyle = document.getElementById('print-page-size-style');
+      if (!pageStyle) {{
+        pageStyle = document.createElement('style');
+        pageStyle.id = 'print-page-size-style';
+        document.head.appendChild(pageStyle);
+      }}
+      if (mode === 'a5') {{
+        pageStyle.textContent = '@media print {{ @page {{ size: A5 landscape; margin: 0; }} }}';
+      }} else {{
+        pageStyle.textContent = '@media print {{ @page {{ size: A4 portrait; margin: 0; }} }}';
+      }}
+    }}
+
+    function loadSampleData() {{
+      const sample = [
+        {{ no: "1", name: "นาย ณฐภัทร วงศ์กลุ่ม", t1: "12.4", s1: "4", t2: "26", s2: "3", t3: "38", s3: "5", t4: "14.5", s4: "4", t5: "10.2", s5: "4", t6: "34.0", s6: "3", t7: "7.9", s7: "4", t8: "185", s8: "4", weight: "50", height: "170", bmi: "17.30", bmiDesc: "สมส่วน", summary: "ดี (รวม 31 คะแนน)", checked: true }},
+        {{ no: "2", name: "นาย ศุภฤกษ์ ดวงแก้ว", t1: "11.8", s1: "4", t2: "28", s2: "4", t3: "42", s3: "5", t4: "16.0", s4: "4", t5: "9.8", s5: "4", t6: "38.5", s6: "4", t7: "7.5", s7: "4", t8: "195", s8: "4", weight: "61", height: "171", bmi: "20.86", bmiDesc: "สมส่วน", summary: "ดีมาก (รวม 33 คะแนน)", checked: true }},
+        {{ no: "3", name: "นางสาว สุชาดา ละปาง", t1: "13.2", s1: "3", t2: "22", s2: "3", t3: "32", s3: "4", t4: "18.0", s4: "5", t5: "11.0", s5: "3", t6: "26.0", s6: "3", t7: "8.6", s7: "3", t8: "155", s8: "3", weight: "42", height: "159", bmi: "16.61", bmiDesc: "สมส่วน", summary: "ปานกลาง (รวม 27 คะแนน)", checked: true }},
+        {{ no: "4", name: "นางสาว ณิชากร ฉิมสุข", t1: "12.9", s1: "4", t2: "20", s2: "3", t3: "30", s3: "3", t4: "15.0", s4: "4", t5: "10.8", s5: "4", t6: "28.0", s6: "3", t7: "8.4", s7: "4", t8: "160", s8: "3", weight: "59", height: "162", bmi: "22.48", bmiDesc: "ท้วม", summary: "ปานกลาง (รวม 28 คะแนน)", checked: true }},
+        {{ no: "5", name: "นาย กิตติ สมศรี", t1: "12.0", s1: "4", t2: "30", s2: "4", t3: "40", s3: "5", t4: "13.0", s4: "3", t5: "9.9", s5: "4", t6: "42.0", s6: "4", t7: "7.6", s7: "4", t8: "190", s8: "4", weight: "66", height: "169", bmi: "23.11", bmiDesc: "ท้วม", summary: "ดี (รวม 32 คะแนน)", checked: true }},
+        {{ no: "6", name: "นางสาว รมย์รวินท์ สุหอม", t1: "13.5", s1: "3", t2: "18", s2: "3", t3: "28", s3: "3", t4: "19.5", s4: "5", t5: "11.2", s5: "3", t6: "25.0", s6: "3", t7: "8.8", s7: "3", t8: "150", s8: "3", weight: "42", height: "150", bmi: "18.67", bmiDesc: "สมส่วน", summary: "ปานกลาง (รวม 26 คะแนน)", checked: true }},
+        {{ no: "7", name: "นางสาว ปัฐมานันท์ ธำรงจิราณัฐนน", t1: "13.0", s1: "3", t2: "22", s2: "3", t3: "34", s3: "4", t4: "17.0", s4: "4", t5: "10.9", s5: "4", t6: "27.5", s6: "3", t7: "8.5", s7: "3", t8: "158", s8: "3", weight: "58", height: "163", bmi: "21.83", bmiDesc: "สมส่วน", summary: "ปานกลาง (รวม 27 คะแนน)", checked: true }},
+        {{ no: "8", name: "นาย พศกร กวางอิน", t1: "12.2", s1: "4", t2: "25", s2: "3", t3: "36", s3: "4", t4: "15.0", s4: "4", t5: "10.1", s5: "4", t6: "33.0", s6: "3", t7: "8.0", s7: "4", t8: "180", s8: "4", weight: "45", height: "163", bmi: "16.94", bmiDesc: "สมส่วน", summary: "ดี (รวม 30 คะแนน)", checked: true }},
+        {{ no: "9", name: "นาย มงคล ชมชื่น", t1: "11.9", s1: "4", t2: "27", s2: "4", t3: "39", s3: "4", t4: "14.0", s4: "4", t5: "9.7", s5: "4", t6: "36.0", s6: "4", t7: "7.7", s7: "4", t8: "188", s8: "4", weight: "52", height: "170", bmi: "17.99", bmiDesc: "สมส่วน", summary: "ดี (รวม 32 คะแนน)", checked: true }},
+        {{ no: "10", name: "นาย จอมทัพ บุญชุบ", t1: "12.1", s1: "4", t2: "29", s2: "4", t3: "41", s3: "5", t4: "16.5", s4: "4", t5: "10.0", s5: "4", t6: "37.0", s6: "4", t7: "7.8", s7: "4", t8: "192", s8: "4", weight: "53", height: "175", bmi: "17.31", bmiDesc: "สมส่วน", summary: "ดีมาก (รวม 33 คะแนน)", checked: true }},
+        {{ no: "11", name: "นางสาว พิชญาพร นามวงศ์", t1: "13.6", s1: "3", t2: "20", s2: "3", t3: "31", s3: "3", t4: "18.5", s4: "5", t5: "11.4", s5: "3", t6: "24.0", s6: "3", t7: "8.9", s7: "3", t8: "152", s8: "3", weight: "38", height: "156", bmi: "15.61", bmiDesc: "ผอม", summary: "ปานกลาง (รวม 26 คะแนน)", checked: true }},
+        {{ no: "12", name: "นางสาว ปรัชญาภรณ์ ขันธรัตน์", t1: "13.1", s1: "3", t2: "23", s2: "3", t3: "33", s3: "4", t4: "17.5", s4: "4", t5: "10.7", s5: "4", t6: "26.5", s6: "3", t7: "8.5", s7: "3", t8: "156", s8: "3", weight: "40", height: "152", bmi: "17.31", bmiDesc: "สมส่วน", summary: "ปานกลาง (รวม 27 คะแนน)", checked: true }},
+        {{ no: "13", name: "นางสาว ปริชาติ ลีลาศีลธรรม", t1: "12.8", s1: "4", t2: "21", s2: "3", t3: "35", s3: "4", t4: "16.0", s4: "4", t5: "10.5", s5: "4", t6: "29.0", s6: "3", t7: "8.3", s7: "4", t8: "162", s8: "3", weight: "52", height: "156", bmi: "21.37", bmiDesc: "สมส่วน", summary: "ดี (รวม 29 คะแนน)", checked: true }},
+        {{ no: "14", name: "นางสาว เบญญา คายแหง", t1: "13.3", s1: "3", t2: "19", s2: "3", t3: "30", s3: "3", t4: "19.0", s4: "5", t5: "11.1", s5: "3", t6: "25.5", s6: "3", t7: "8.7", s7: "3", t8: "154", s8: "3", weight: "45", height: "160", bmi: "17.58", bmiDesc: "สมส่วน", summary: "ปานกลาง (รวม 26 คะแนน)", checked: true }},
+        {{ no: "15", name: "นางสาว ชนันธร เที่ยงอยู่", t1: "12.7", s1: "4", t2: "24", s2: "3", t3: "36", s3: "4", t4: "17.2", s4: "4", t5: "10.4", s5: "4", t6: "30.0", s6: "3", t7: "8.2", s7: "4", t8: "165", s8: "4", weight: "59", height: "169", bmi: "20.66", bmiDesc: "สมส่วน", summary: "ดี (รวม 30 คะแนน)", checked: true }}
+      ];
+      setStudents(sample, "โรงเรียนพระหฤทัยเชียงใหม่", "ม.4/1");
+    }}
+
+    function setStudents(list, schoolName, className) {{
+      students = list;
+      if (schoolName) document.getElementById('meta-school').value = schoolName;
+      if (className) document.getElementById('meta-class').value = className;
+      currentIndex = 0;
+      renderStudentList();
+      updateSelectionCounts();
+      updateCurrentSlip();
+    }}
+
+    function renderStudentList() {{
+      const tbody = document.getElementById('student-tbody');
+      if (!students || students.length === 0) {{
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--ink-muted); padding: 24px;">ไม่พบข้อมูลนักเรียน</td></tr>`;
+        return;
+      }}
+
+      let html = '';
+      students.forEach((s, idx) => {{
+        const gender = detectGender(s.name);
+        const genderTag = gender === 'female' ? '<span style="color:#be185d;">หญิง</span>' : '<span style="color:#1d4ed8;">ชาย</span>';
+        const activeClass = idx === currentIndex ? 'active' : '';
+        html += `
+          <tr class="${{activeClass}}" id="row-${{idx}}">
+            <td style="text-align: center;">
+              <input type="checkbox" ${{s.checked ? 'checked' : ''}} onchange="toggleStudentCheck(${{idx}}, this.checked)">
+            </td>
+            <td class="num-tabular"><b>${{s.no || (idx + 1)}}</b></td>
+            <td>${{s.name}}</td>
+            <td>${{genderTag}}</td>
+            <td style="text-align: center;">
+              <button class="btn btn-secondary btn-sm" onclick="selectStudentPreview(${{idx}})" style="padding: 2px 8px; font-size: 11px;">ดู</button>
+            </td>
+          </tr>
+        `;
+      }});
+      tbody.innerHTML = html;
+      document.getElementById('total-count').innerText = students.length;
+      document.getElementById('header-student-count').innerText = `${{students.length}} คน`;
+    }}
+
+    function selectStudentPreview(idx) {{
+      currentIndex = idx;
+      document.querySelectorAll('.data-table tr').forEach(r => r.classList.remove('active'));
+      const activeRow = document.getElementById(`row-${{idx}}`);
+      if (activeRow) activeRow.classList.add('active');
+      updateCurrentSlip();
+    }}
+
+    function prevStudent() {{
+      if (currentIndex > 0) selectStudentPreview(currentIndex - 1);
+    }}
+
+    function nextStudent() {{
+      if (currentIndex < students.length - 1) selectStudentPreview(currentIndex + 1);
+    }}
+
+    function toggleStudentCheck(idx, checked) {{
+      students[idx].checked = checked;
+      updateSelectionCounts();
+    }}
+
+    function toggleCheckAll(checked) {{
+      selectAll(checked);
+    }}
+
+    function selectAll(checked) {{
+      students.forEach(s => s.checked = checked);
+      document.getElementById('check-all').checked = checked;
+      renderStudentList();
+      updateSelectionCounts();
+    }}
+
+    function updateSelectionCounts() {{
+      const count = students.filter(s => s.checked).length;
+      document.getElementById('selected-count').innerText = count;
+      document.querySelectorAll('.btn-selected-num').forEach(el => el.innerText = count);
+    }}
+
+    function filterStudents() {{
+      const query = document.getElementById('search-box').value.toLowerCase().trim();
+      students.forEach((s, idx) => {{
+        const text = `${{s.no}} ${{s.name}}`.toLowerCase();
+        const row = document.getElementById(`row-${{idx}}`);
+        if (row) row.style.display = text.includes(query) ? '' : 'none';
+      }});
+    }}
+
+    function updateCurrentSlip() {{
+      if (!students || students.length === 0 || !students[currentIndex]) return;
+      const s = students[currentIndex];
+      const school = document.getElementById('meta-school').value || "โรงเรียนพระหฤทัยเชียงใหม่";
+      const cls = document.getElementById('meta-class').value || "ม.4/1";
+
+      document.getElementById('preview-current-idx').innerText = `คนปัจจุบัน: ${{currentIndex + 1}} / ${{students.length}}`;
+      document.getElementById('slip-school-class').innerHTML = `${{school}} &bull; ชั้น${{cls}}`;
+      document.getElementById('slip-name').innerText = s.name || "-";
+      document.getElementById('slip-class').innerText = cls;
+      document.getElementById('slip-no').innerText = s.no || (currentIndex + 1);
+      document.getElementById('slip-weight').innerText = s.weight || "-";
+      document.getElementById('slip-height').innerText = s.height || "-";
+
+      const gender = detectGender(s.name);
+      if (gender === 'male') {{
+        document.getElementById('slip-gender-male').innerHTML = `<span class="check-mark">&#10003;</span> ชาย`;
+        document.getElementById('slip-gender-male').style.color = "#000";
+        document.getElementById('slip-gender-female').innerHTML = `<span class="check-mark"></span> หญิง`;
+        document.getElementById('slip-gender-female').style.color = "#888";
+      }} else {{
+        document.getElementById('slip-gender-male').innerHTML = `<span class="check-mark"></span> ชาย`;
+        document.getElementById('slip-gender-male').style.color = "#888";
+        document.getElementById('slip-gender-female').innerHTML = `<span class="check-mark">&#10003;</span> หญิง`;
+        document.getElementById('slip-gender-female').style.color = "#000";
+      }}
+
+      for (let i = 1; i <= 8; i++) {{
+        document.getElementById(`slip-t${{i}}`).innerText = s[`t${{i}}`] || "-";
+        document.getElementById(`slip-s${{i}}`).innerText = getScoreLabel(s[`s${{i}}`]);
+      }}
+
+      document.getElementById('slip-bmi').innerText = s.bmi ? parseFloat(s.bmi).toFixed(2) : "-";
+      document.getElementById('slip-bmi-desc').innerText = s.bmiDesc || "-";
+      document.getElementById('slip-summary').innerText = s.summary || "-";
+    }}
+
+    function buildSlipHTML(s, school, cls) {{
+      const gender = detectGender(s.name);
+      const isMale = gender === 'male';
+      const bmiVal = s.bmi ? parseFloat(s.bmi).toFixed(2) : "-";
+
+      return `
+        <div class="a5-slip">
+          <div class="slip-header">
+            <img class="slip-crest" src="data:image/png;base64,${{SCHOOL_LOGO_BASE64}}" alt="ตราโรงเรียน">
+            <div class="slip-title-box">
+              <div class="slip-main-title">รายงานผลการทดสอบสมรรถภาพทางกาย</div>
+              <div class="slip-sub-title">${{school}} &bull; ชั้น${{cls}}</div>
+            </div>
+          </div>
+
+          <div class="student-info-box">
+            <div class="info-row">
+              <div>ชื่อ-สกุล: <span class="info-val">${{s.name || "-"}}</span></div>
+              <div>ชั้น: <span class="info-val">${{cls}}</span></div>
+              <div>เลขที่: <span class="info-val num-tabular">${{s.no || "-"}}</span></div>
+            </div>
+            <div class="info-row">
+              <div>น้ำหนัก: <span class="info-val num-tabular">${{s.weight || "-"}}</span> กก.</div>
+              <div>ส่วนสูง: <span class="info-val num-tabular">${{s.height || "-"}}</span> ซม.</div>
+              <div>
+                เพศ: &nbsp;
+                <span class="checkbox-box" style="color: ${{isMale ? '#000' : '#888'}};">
+                  <span class="check-mark">${{isMale ? '&#10003;' : ''}}</span> ชาย
+                </span>
+                &nbsp;&nbsp;
+                <span class="checkbox-box" style="color: ${{!isMale ? '#000' : '#888'}};">
+                  <span class="check-mark">${{!isMale ? '&#10003;' : ''}}</span> หญิง
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <table class="slip-table">
+            <thead>
+              <tr>
+                <th class="cell-label" style="width: 8.5%;">แบบ<br>ทดสอบ</th>
+                <th class="cell-label" style="width: 11.4%;">วิ่งอ้อมหลัก<br><span class="th-unit">(วินาที)</span></th>
+                <th class="cell-label" style="width: 11.4%;">ดันพื้น 30 วิ<br><span class="th-unit">(ครั้ง)</span></th>
+                <th class="cell-label" style="width: 11.4%;">ลุกนั่ง 60 วิ<br><span class="th-unit">(ครั้ง)</span></th>
+                <th class="cell-label" style="width: 11.5%;">งอตัวไปข้างหน้า<br><span class="th-unit">(เซนติเมตร)</span></th>
+                <th class="cell-label" style="width: 11.4%;">วิ่งเก็บของ<br><span class="th-unit">(วินาที)</span></th>
+                <th class="cell-label" style="width: 11.4%;">แรงบีบมือ<br><span class="th-unit">(กิโลกรัม)</span></th>
+                <th class="cell-label" style="width: 11.4%;">วิ่ง 50 เมตร<br><span class="th-unit">(วินาที)</span></th>
+                <th class="cell-label" style="width: 11.5%;">ยืนกระโดดไกล<br><span class="th-unit">(เซนติเมตร)</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="cell-label">ผลทดสอบ</td>
+                <td class="cell-data"><div class="test-val num-tabular">${{s.t1 || "-"}}</div></td>
+                <td class="cell-data"><div class="test-val num-tabular">${{s.t2 || "-"}}</div></td>
+                <td class="cell-data"><div class="test-val num-tabular">${{s.t3 || "-"}}</div></td>
+                <td class="cell-data"><div class="test-val num-tabular">${{s.t4 || "-"}}</div></td>
+                <td class="cell-data"><div class="test-val num-tabular">${{s.t5 || "-"}}</div></td>
+                <td class="cell-data"><div class="test-val num-tabular">${{s.t6 || "-"}}</div></td>
+                <td class="cell-data"><div class="test-val num-tabular">${{s.t7 || "-"}}</div></td>
+                <td class="cell-data"><div class="test-val num-tabular">${{s.t8 || "-"}}</div></td>
+              </tr>
+              <tr>
+                <td class="cell-label">คะแนน</td>
+                <td class="cell-data"><span class="score-badge">${{getScoreLabel(s.s1)}}</span></td>
+                <td class="cell-data"><span class="score-badge">${{getScoreLabel(s.s2)}}</span></td>
+                <td class="cell-data"><span class="score-badge">${{getScoreLabel(s.s3)}}</span></td>
+                <td class="cell-data"><span class="score-badge">${{getScoreLabel(s.s4)}}</span></td>
+                <td class="cell-data"><span class="score-badge">${{getScoreLabel(s.s5)}}</span></td>
+                <td class="cell-data"><span class="score-badge">${{getScoreLabel(s.s6)}}</span></td>
+                <td class="cell-data"><span class="score-badge">${{getScoreLabel(s.s7)}}</span></td>
+                <td class="cell-data"><span class="score-badge">${{getScoreLabel(s.s8)}}</span></td>
+              </tr>
+              <tr class="border-top-thick">
+                <td class="cell-label">ค่าดัชนีมวลกาย</td>
+                <td colspan="2" class="cell-data num-tabular" style="font-size: 14px; font-weight: 700;">${{bmiVal}}</td>
+                <td colspan="2" class="cell-label">ดัชนีมวลกาย (BMI)</td>
+                <td class="cell-data" style="font-size: 13.5px; font-weight: 700;">${{s.bmiDesc || "-"}}</td>
+                <td class="cell-label">สรุปสมรรถภาพ</td>
+                <td colspan="2" class="cell-data" style="font-size: 13px; font-weight: 700;">${{s.summary || "-"}}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="bottom-row">
+            <div class="footer-text">
+              สมรรถภาพทางกายที่สัมพันธ์กับสุขภาพสำหรับเด็กไทย อายุ 7 – 18 ปี<br>
+              เกณฑ์มาตรฐาน ของ สสส. สำนักงานกองทุนสนับสนุนการสร้างเสริมสุขภาพ
+            </div>
+            <div class="legend-box">
+              <div class="legend-title">เกณฑ์ระดับคะแนน:</div>
+              <div class="num-tabular">5 = ดีมาก &bull; 4 = ดี &bull; 3 = ปานกลาง &bull; 2 = ต่ำ &bull; 1 = ต่ำมาก</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }}
+
+    function printSelectedStudents() {{
+      const selected = students.filter(s => s.checked);
+      if (selected.length === 0) {{
+        alert("กรุณาเลือกนักเรียนอย่างน้อย 1 คนเพื่อพิมพ์ครับ");
+        return;
+      }}
+
+      const school = document.getElementById('meta-school').value || "โรงเรียนพระหฤทัยเชียงใหม่";
+      const cls = document.getElementById('meta-class').value || "ม.4/1";
+      const printBox = document.getElementById('print-container');
+      printBox.innerHTML = '';
+
+      if (paperMode === 'a4') {{
+        for (let i = 0; i < selected.length; i += 2) {{
+          const s1 = selected[i];
+          const s2 = selected[i + 1];
+
+          let pageHtml = `<div class="print-page-a4">`;
+          pageHtml += `<div class="print-half-slip">${{buildSlipHTML(s1, school, cls)}}</div>`;
+          if (s2) {{
+            pageHtml += `<div class="print-cut-line"></div>`;
+            pageHtml += `<div class="print-half-slip">${{buildSlipHTML(s2, school, cls)}}</div>`;
+          }}
+          pageHtml += `</div>`;
+          printBox.innerHTML += pageHtml;
+        }}
+      }} else {{
+        selected.forEach(s => {{
+          printBox.innerHTML += `<div class="print-page-a5">${{buildSlipHTML(s, school, cls)}}</div>`;
+        }});
+      }}
+
+      window.print();
+    }}
+
+    async function exportMergedPDF() {{
+      const selected = students.filter(s => s.checked);
+      if (selected.length === 0) {{
+        alert("กรุณาเลือกนักเรียนอย่างน้อย 1 คนครับ");
+        return;
+      }}
+
+      showModal("กำลังสร้างเอกสาร PDF...", "ระบบกำลังเรนเดอร์เอกสารทีละหน้า");
+      const school = document.getElementById('meta-school').value || "โรงเรียนพระหฤทัยเชียงใหม่";
+      const cls = document.getElementById('meta-class').value || "ม.4/1";
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.top = '-9999px';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '794px';
+      document.body.appendChild(tempDiv);
+
+      const {{ jsPDF }} = window.jspdf;
+      const pdf = new jsPDF({{
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a5'
+      }});
+
+      for (let i = 0; i < selected.length; i++) {{
+        const s = selected[i];
+        tempDiv.innerHTML = buildSlipHTML(s, school, cls);
+        const slipEl = tempDiv.firstElementChild;
+        slipEl.style.boxShadow = 'none';
+
+        const canvas = await html2canvas(slipEl, {{
+          scale: 2,
+          useCORS: true,
+          logging: false
+        }});
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        if (i > 0) pdf.addPage('a5', 'landscape');
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 148);
+
+        const progress = Math.round(((i + 1) / selected.length) * 100);
+        updateModalProgress(progress, `กำลังประมวลผลคนที่ ${{i + 1}} / ${{selected.length}} (${{s.name}})`);
+      }}
+
+      document.body.removeChild(tempDiv);
+      const fileName = `รายงานสมรรถภาพ_${{cls.replace('/', '-')}}_${{selected.length}}คน.pdf`;
+      pdf.save(fileName);
+      hideModal();
+    }}
+
+    async function exportImagesZip() {{
+      const selected = students.filter(s => s.checked);
+      if (selected.length === 0) {{
+        alert("กรุณาเลือกนักเรียนอย่างน้อย 1 คนครับ");
+        return;
+      }}
+
+      showModal("กำลังบันทึกรูปภาพแยกรายคน...", "กรุณารอสักครู่");
+      const school = document.getElementById('meta-school').value || "โรงเรียนพระหฤทัยเชียงใหม่";
+      const cls = document.getElementById('meta-class').value || "ม.4/1";
+
+      const zip = new JSZip();
+      const folder = zip.folder(`รายงานสมรรถภาพ_${{cls.replace('/', '-')}}`);
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.top = '-9999px';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '794px';
+      document.body.appendChild(tempDiv);
+
+      for (let i = 0; i < selected.length; i++) {{
+        const s = selected[i];
+        tempDiv.innerHTML = buildSlipHTML(s, school, cls);
+        const slipEl = tempDiv.firstElementChild;
+        slipEl.style.boxShadow = 'none';
+
+        const canvas = await html2canvas(slipEl, {{
+          scale: 2,
+          useCORS: true,
+          logging: false
+        }});
+
+        const imgBase64 = canvas.toDataURL('image/png').split(',')[1];
+        const numPad = String(s.no || (i + 1)).padStart(2, '0');
+        const cleanName = (s.name || `student_${{i+1}}`).replace(/[^a-zA-Z0-9ก-๙]/g, '_');
+        folder.file(`${{numPad}}_${{cleanName}}.png`, imgBase64, {{ base64: true }});
+
+        const progress = Math.round(((i + 1) / selected.length) * 90);
+        updateModalProgress(progress, `กำลังเรนเดอร์รูปภาพคนที่ ${{i + 1}} / ${{selected.length}}`);
+      }}
+
+      document.body.removeChild(tempDiv);
+      updateModalProgress(95, "กำลังบีบอัดไฟล์ ZIP...");
+
+      const content = await zip.generateAsync({{ type: "blob" }});
+      saveAs(content, `รายงานสมรรถภาพ_${{cls.replace('/', '-')}}_${{selected.length}}คน.zip`);
+      hideModal();
+    }}
+
+    function showModal(title, desc) {{
+      document.getElementById('modal-title').innerText = title;
+      document.getElementById('modal-desc').innerText = desc;
+      document.getElementById('progress-bar').style.width = '0%';
+      document.getElementById('progress-text').innerText = '0%';
+      document.getElementById('progress-modal').classList.add('active');
+    }}
+
+    function updateModalProgress(percent, desc) {{
+      document.getElementById('progress-bar').style.width = `${{percent}}%`;
+      document.getElementById('progress-text').innerText = `${{percent}}%`;
+      if (desc) document.getElementById('modal-desc').innerText = desc;
+    }}
+
+    function hideModal() {{
+      document.getElementById('progress-modal').classList.remove('active');
+    }}
+
+    // ==========================================
+    // DATA INGESTION (JSONP + File Drag & Drop)
+    // ==========================================
+    async function fetchGoogleSheet() {{
+      const url = document.getElementById('sheet-url').value.trim();
+      if (!url) {{
+        alert("กรุณากรอกลิงก์ Google Sheets ครับ");
+        return;
+      }}
+
+      showModal("กำลังดึงข้อมูลจาก Google Sheets...", "กำลังเชื่อมต่อไปยัง Google Sheets");
+      updateModalProgress(30, "กำลังดาวน์โหลดข้อมูล...");
+
+      const sheetIdMatch = url.match(/\\/spreadsheets\\/d\\/([a-zA-Z0-9-_]+)/);
+      const gidMatch = url.match(/[#&?]gid=([0-9]+)/);
+
+      if (sheetIdMatch) {{
+        const sheetId = sheetIdMatch[1];
+        const gid = gidMatch ? gidMatch[1] : null;
+
+        try {{
+          const res = await new Promise((resolve, reject) => {{
+            const cbName = 'gviz_cb_' + Date.now();
+            const script = document.createElement('script');
+            let gvizUrl = `https://docs.google.com/spreadsheets/d/${{sheetId}}/gviz/tq?tqx=responseHandler:${{cbName}}`;
+            if (gid) gvizUrl += `&gid=${{gid}}`;
+
+            const timeout = setTimeout(() => {{
+              cleanup();
+              reject(new Error("Timeout"));
+            }}, 12000);
+
+            function cleanup() {{
+              clearTimeout(timeout);
+              if (script.parentNode) script.parentNode.removeChild(script);
+              delete window[cbName];
+            }}
+
+            window[cbName] = function(data) {{
+              cleanup();
+              resolve(data);
+            }};
+
+            script.onerror = function() {{
+              cleanup();
+              reject(new Error("Script error"));
+            }};
+
+            script.src = gvizUrl;
+            document.body.appendChild(script);
+          }});
+
+          if (res && res.status === 'ok' && res.table) {{
+            updateModalProgress(70, "กำลังแยกข้อมูลนักเรียน...");
+            const headers = res.table.cols.map(col => col.label || '');
+            const dataRows = res.table.rows.map(r => {{
+              return r.c ? r.c.map(cell => (cell && cell.v !== null && cell.v !== undefined) ? String(cell.v) : '') : [];
+            }});
+            parseRowsArray([headers, ...dataRows]);
+            hideModal();
+            return;
+          }}
+        }} catch (jsonpErr) {{
+          console.warn("JSONP attempt failed, trying fallback...", jsonpErr);
+        }}
+      }}
+
+      // Fallback: Local Server Proxy
+      try {{
+        const resp = await fetch(`/api/fetch-sheet?url=${{encodeURIComponent(url)}}`);
+        if (resp.ok) {{
+          const res = await resp.json();
+          if (res.success && res.csv) {{
+            parseCsvString(res.csv);
+            hideModal();
+            return;
+          }}
+        }}
+      }} catch (e) {{
+        console.log("Local backend proxy not available, falling back...", e);
+      }}
+
+      hideModal();
+      alert("ไม่สามารถดึงข้อมูลจากลิงก์ได้โดยตรง กรุณาตรวจสอบว่า Google Sheets ได้เปิดสิทธิ์ 'ทุกคนที่มีลิงก์มีสิทธิ์ดู' แล้วหรือไม่ครับ\\n\\nหรือวิธีที่ง่ายที่สุด:\\n1. ใน Google Sheets ไปที่เมนู ไฟล์ (File) > ดาวน์โหลด (Download) > Microsoft Excel (.xlsx)\\n2. ลากไฟล์มาวางลงในช่องสีฟ้าด้านล่างได้ทันทีครับ!");
+    }}
+
+    function handleFileSelect(evt) {{
+      const file = evt.target.files[0];
+      if (!file) return;
+      processFile(file);
+    }}
+
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', (e) => {{
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    }});
+    dropzone.addEventListener('dragleave', () => {{
+      dropzone.classList.remove('dragover');
+    }});
+    dropzone.addEventListener('drop', (e) => {{
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {{
+        processFile(e.dataTransfer.files[0]);
+      }}
+    }});
+
+    function processFile(file) {{
+      const reader = new FileReader();
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      reader.onload = function(e) {{
+        const data = e.target.result;
+        if (ext === 'csv') {{
+          const decoder = new TextDecoder('utf-8');
+          const csvText = typeof data === 'string' ? data : decoder.decode(data);
+          parseCsvString(csvText);
+        }} else {{
+          const workbook = XLSX.read(data, {{ type: 'array' }});
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, {{ header: 1, defval: '' }});
+          parseRowsArray(rawRows);
+        }}
+      }};
+
+      if (ext === 'csv') {{
+        reader.readAsText(file, 'utf-8');
+      }} else {{
+        reader.readAsArrayBuffer(file);
+      }}
+    }}
+
+    function parseCsvString(csvText) {{
+      const workbook = XLSX.read(csvText, {{ type: 'string' }});
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, {{ header: 1, defval: '' }});
+      parseRowsArray(rawRows);
+    }}
+
+    function parseRowsArray(rows) {{
+      if (!rows || rows.length === 0) {{
+        alert("ไม่พบข้อมูลในไฟล์ครับ");
+        return;
+      }}
+
+      let schoolName = "โรงเรียนพระหฤทัยเชียงใหม่";
+      let className = "ม.4/1";
+      let headerRowIdx = -1;
+
+      for (let i = 0; i < Math.min(rows.length, 10); i++) {{
+        const row = rows[i].map(c => String(c).trim());
+        const rowStr = row.join(' ');
+
+        if (rowStr.includes('โรงเรียน')) {{
+          const mSchool = rowStr.match(/โรงเรียน[^\\s,]+/);
+          if (mSchool) schoolName = mSchool[0];
+          else schoolName = row.find(c => c.includes('โรงเรียน')) || schoolName;
+        }}
+        if (rowStr.includes('ห้อง') || rowStr.includes('ม.')) {{
+          const mClass = rowStr.match(/ห้อง\\s*([มM]\\.?[0-9]+(?:\\/[0-9]+)?)/i) || rowStr.match(/([มM]\\.?[0-9]+(?:\\/[0-9]+)?)/i);
+          if (mClass) className = mClass[1].trim();
+        }}
+        if (row.some(c => c.includes('เลขที่')) && row.some(c => c.includes('ชื่อ'))) {{
+          headerRowIdx = i;
+          break;
+        }}
+      }}
+
+      if (headerRowIdx === -1) {{
+        alert("ไม่พบคอลัมน์ 'เลขที่' หรือ 'ชื่อ' ในตาราง กรุณาตรวจสอบหัวตารางครับ");
+        return;
+      }}
+
+      const headers = rows[headerRowIdx].map(c => String(c).trim());
+
+      const findCol = (keyword, startFrom = 0) => {{
+        for (let j = startFrom; j < headers.length; j++) {{
+          if (headers[j].toLowerCase().includes(keyword.toLowerCase())) return j;
+        }}
+        return -1;
+      }};
+
+      const colNo = findCol('เลขที่');
+      const colName = findCol('ชื่อ');
+      const colSurname = findCol('นามสกุล');
+
+      const testKeywords = [
+        'วิ่งอ้อม',
+        'ดันพื้น',
+        'ลุกนั่ง',
+        'งอตัว',
+        'วิ่งเก็บของ',
+        'แรงบีบมือ',
+        'วิ่ง50',
+        'กระโดดไกล'
+      ];
+
+      const testCols = [];
+      testKeywords.forEach(kw => {{
+        const cIdx = findCol(kw);
+        let sIdx = -1;
+        if (cIdx !== -1) {{
+          if (cIdx + 1 < headers.length && headers[cIdx + 1].includes('คะแนน')) {{
+            sIdx = cIdx + 1;
+          }} else {{
+            sIdx = findCol('คะแนน', cIdx + 1);
+          }}
+        }}
+        testCols.push({{ valCol: cIdx, scoreCol: sIdx }});
+      }});
+
+      const colWeight = findCol('น้ำหนัก');
+      const colHeight = findCol('ส่วนสูง');
+      const colBmiVal = findCol('ค่าดัชนีมวลกาย');
+      const colBmiDesc = findCol('ดัชนีมวลกาย', colBmiVal !== -1 ? colBmiVal + 1 : 0);
+      const colSummary = findCol('สรุป สมรรถภาพ') !== -1 ? findCol('สรุป สมรรถภาพ') : findCol('สรุป');
+
+      const parsedStudents = [];
+
+      for (let r = headerRowIdx + 1; r < rows.length; r++) {{
+        const row = rows[r];
+        if (!row || row.length === 0) continue;
+
+        const rawNo = colNo !== -1 ? String(row[colNo] || '').trim() : '';
+        const rawName = colName !== -1 ? String(row[colName] || '').trim() : '';
+        const rawSurname = colSurname !== -1 ? String(row[colSurname] || '').trim() : '';
+
+        if (!rawName || rawName.includes('สรุป') || rawName.includes('ทั้งหมด')) continue;
+
+        const fullName = rawSurname ? `${{rawName}} ${{rawSurname}}`.trim() : rawName;
+
+        const sObj = {{
+          no: rawNo,
+          name: fullName,
+          weight: colWeight !== -1 ? String(row[colWeight] || '').trim() : '',
+          height: colHeight !== -1 ? String(row[colHeight] || '').trim() : '',
+          bmi: colBmiVal !== -1 ? String(row[colBmiVal] || '').trim() : '',
+          bmiDesc: colBmiDesc !== -1 ? String(row[colBmiDesc] || '').trim() : '',
+          summary: colSummary !== -1 ? String(row[colSummary] || '').trim() : '',
+          checked: true
+        }};
+
+        testCols.forEach((tc, idx) => {{
+          const tKey = `t${{idx + 1}}`;
+          const sKey = `s${{idx + 1}}`;
+          sObj[tKey] = tc.valCol !== -1 ? String(row[tc.valCol] || '').trim() : '';
+          sObj[sKey] = tc.scoreCol !== -1 ? String(row[tc.scoreCol] || '').trim() : '';
+        }});
+
+        parsedStudents.push(sObj);
+      }}
+
+      if (parsedStudents.length === 0) {{
+        alert("ไม่พบแถวข้อมูลนักเรียนใต้หัวตารางครับ");
+        return;
+      }}
+
+      setStudents(parsedStudents, schoolName, className);
+    }}
+
+    window.addEventListener('DOMContentLoaded', () => {{
+      loadSampleData();
+    }});
+  </script>
+
+</body>
+</html>
+'''
+
+with open('index.html', 'w', encoding='utf-8') as f:
+    f.write(html_code)
+
+print('Generated polished index.html without emojis according to Universal Web Design Guide!')
