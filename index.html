@@ -594,61 +594,99 @@
     /* Print Styles */
     @media print {
       @page {
+        size: A4 portrait;
         margin: 0;
       }
-      body {
+      html, body {
         background: #ffffff !important;
         padding: 0 !important;
         margin: 0 !important;
+        width: 210mm !important;
+        height: auto !important;
+        min-height: auto !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       .no-print, .top-nav, .workspace, .modal-backdrop {
         display: none !important;
       }
       #print-container {
         display: block !important;
-        width: 100%;
-        background: #ffffff;
+        width: 210mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
       }
       .print-page-a4 {
-        width: 210mm;
-        height: 297mm;
-        page-break-after: always;
-        box-sizing: border-box;
-        padding: 6mm 10mm;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+        width: 210mm !important;
+        height: 290mm !important;
+        max-height: 290mm !important;
+        box-sizing: border-box !important;
+        padding: 6mm 12mm !important;
+        margin: 0 auto !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        overflow: hidden !important;
+      }
+      .print-page-a4:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
       }
       .print-half-slip {
-        height: 140mm;
-        box-sizing: border-box;
-        overflow: hidden;
+        height: 135mm !important;
+        max-height: 135mm !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
       }
       .print-cut-line {
-        border-top: 1px dashed #777;
-        text-align: center;
-        font-size: 10px;
-        color: #555;
-        margin: 2mm 0;
-        position: relative;
+        border-top: 1px dashed #888888 !important;
+        height: 0 !important;
+        margin: 2mm 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
       }
       .print-cut-line::before {
-        content: "ตัดกึ่งกลางแจก (ขนาด A5)";
-        position: relative;
-        top: -8px;
-        background: white;
-        padding: 0 10px;
+        display: none !important;
+        content: none !important;
       }
       .print-page-a5 {
-        width: 210mm;
-        height: 148mm;
-        page-break-after: always;
-        box-sizing: border-box;
-        padding: 8mm 12mm;
-        overflow: hidden;
+        width: 210mm !important;
+        height: 142mm !important;
+        max-height: 142mm !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        box-sizing: border-box !important;
+        padding: 6mm 12mm !important;
+        margin: 0 auto !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
       }
-      .print-page-a5:last-child, .print-page-a4:last-child {
-        page-break-after: avoid;
+      .print-page-a5:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }
+      #print-container .a5-slip {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: auto !important;
+        height: auto !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
       }
     }
   </style>
@@ -976,6 +1014,18 @@
       paperMode = mode;
       document.getElementById('btn-mode-a4').classList.toggle('active', mode === 'a4');
       document.getElementById('btn-mode-a5').classList.toggle('active', mode === 'a5');
+      
+      let pageStyle = document.getElementById('print-page-size-style');
+      if (!pageStyle) {
+        pageStyle = document.createElement('style');
+        pageStyle.id = 'print-page-size-style';
+        document.head.appendChild(pageStyle);
+      }
+      if (mode === 'a5') {
+        pageStyle.textContent = '@media print { @page { size: A5 landscape; margin: 0; } }';
+      } else {
+        pageStyle.textContent = '@media print { @page { size: A4 portrait; margin: 0; } }';
+      }
     }
 
     function loadSampleData() {
