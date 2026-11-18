@@ -446,6 +446,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 10px;
     }
     .info-row + .info-row {
       margin-top: 4px;
@@ -456,23 +457,34 @@
       font-weight: 700;
       color: #000000;
     }
+    .gender-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
     .checkbox-box {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
     }
     .check-mark {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       width: 14px;
       height: 14px;
       border: 1px solid #000000;
-      line-height: 12px;
-      text-align: center;
       font-size: 11px;
-      font-weight: bold;
-      vertical-align: middle;
+      font-weight: 700;
+      line-height: 1;
       border-radius: 2px;
+      box-sizing: border-box;
+      flex-shrink: 0;
     }
 
     /* High-Contrast B&W Table */
@@ -911,17 +923,16 @@
             <div class="student-info-box">
               <div class="info-row">
                 <div>ชื่อ-สกุล: <span class="info-val" id="slip-name">นาย ณฐภัทร วงศ์กลุ่ม</span></div>
-                <div>ชั้น: <span class="info-val" id="slip-class">ม.4/1</span></div>
-                <div>เลขที่: <span class="info-val num-tabular" id="slip-no">1</span></div>
+                <div style="white-space: nowrap; flex-shrink: 0;">ชั้น: <span class="info-val" id="slip-class">ม.4/1</span></div>
+                <div style="white-space: nowrap; flex-shrink: 0;">เลขที่: <span class="info-val num-tabular" id="slip-no">1</span></div>
               </div>
               <div class="info-row">
-                <div>น้ำหนัก: <span class="info-val num-tabular" id="slip-weight">50</span> กก.</div>
-                <div>ส่วนสูง: <span class="info-val num-tabular" id="slip-height">170</span> ซม.</div>
-                <div>
-                  เพศ: &nbsp;
-                  <span class="checkbox-box" id="slip-gender-male"><span class="check-mark">&#10003;</span> ชาย</span>
-                  &nbsp;&nbsp;
-                  <span class="checkbox-box" id="slip-gender-female" style="color: #777;"><span class="check-mark"></span> หญิง</span>
+                <div style="white-space: nowrap;">น้ำหนัก: <span class="info-val num-tabular" id="slip-weight">50</span> กก.</div>
+                <div style="white-space: nowrap;">ส่วนสูง: <span class="info-val num-tabular" id="slip-height">170</span> ซม.</div>
+                <div class="gender-group">
+                  <span>เพศ:</span>
+                  <span class="checkbox-box" id="slip-gender-male"><span class="check-mark">&#10003;</span><span>ชาย</span></span>
+                  <span class="checkbox-box" id="slip-gender-female" style="color: #777;"><span class="check-mark"></span><span>หญิง</span></span>
                 </div>
               </div>
             </div>
@@ -965,12 +976,12 @@
                   <td class="cell-data"><span class="score-badge" id="slip-s8">-</span></td>
                 </tr>
                 <tr class="border-top-thick">
-                  <td class="cell-label">ค่าดัชนีมวลกาย</td>
-                  <td colspan="2" class="cell-data num-tabular" style="font-size: 14px; font-weight: 700;" id="slip-bmi">-</td>
-                  <td colspan="2" class="cell-label">ดัชนีมวลกาย (BMI)</td>
-                  <td class="cell-data" style="font-size: 13.5px; font-weight: 700;" id="slip-bmi-desc">-</td>
-                  <td class="cell-label">สรุปสมรรถภาพ</td>
-                  <td colspan="2" class="cell-data" style="font-size: 13px; font-weight: 700;" id="slip-summary">-</td>
+                  <td colspan="2" class="cell-label" style="white-space: nowrap;">ค่าดัชนีมวลกาย</td>
+                  <td class="cell-data num-tabular" style="font-size: 14px; font-weight: 700; white-space: nowrap;" id="slip-bmi">-</td>
+                  <td colspan="2" class="cell-label" style="white-space: nowrap;">ดัชนีมวลกาย (BMI)</td>
+                  <td class="cell-data" style="font-size: 12.5px; font-weight: 700; white-space: nowrap;" id="slip-bmi-desc">-</td>
+                  <td class="cell-label" style="white-space: nowrap;">สรุปสมรรถภาพ</td>
+                  <td colspan="2" class="cell-data" style="font-size: 13px; font-weight: 700; white-space: nowrap;" id="slip-summary">-</td>
                 </tr>
               </tbody>
             </table>
@@ -1198,14 +1209,14 @@
 
       const gender = detectGender(s.name);
       if (gender === 'male') {
-        document.getElementById('slip-gender-male').innerHTML = `<span class="check-mark">&#10003;</span> ชาย`;
+        document.getElementById('slip-gender-male').innerHTML = `<span class="check-mark">&#10003;</span><span>ชาย</span>`;
         document.getElementById('slip-gender-male').style.color = "#000";
-        document.getElementById('slip-gender-female').innerHTML = `<span class="check-mark"></span> หญิง`;
+        document.getElementById('slip-gender-female').innerHTML = `<span class="check-mark"></span><span>หญิง</span>`;
         document.getElementById('slip-gender-female').style.color = "#888";
       } else {
-        document.getElementById('slip-gender-male').innerHTML = `<span class="check-mark"></span> ชาย`;
+        document.getElementById('slip-gender-male').innerHTML = `<span class="check-mark"></span><span>ชาย</span>`;
         document.getElementById('slip-gender-male').style.color = "#888";
-        document.getElementById('slip-gender-female').innerHTML = `<span class="check-mark">&#10003;</span> หญิง`;
+        document.getElementById('slip-gender-female').innerHTML = `<span class="check-mark">&#10003;</span><span>หญิง</span>`;
         document.getElementById('slip-gender-female').style.color = "#000";
       }
 
@@ -1237,21 +1248,16 @@
           <div class="student-info-box">
             <div class="info-row">
               <div>ชื่อ-สกุล: <span class="info-val">${s.name || "-"}</span></div>
-              <div>ชั้น: <span class="info-val">${cls}</span></div>
-              <div>เลขที่: <span class="info-val num-tabular">${s.no || "-"}</span></div>
+              <div style="white-space: nowrap; flex-shrink: 0;">ชั้น: <span class="info-val">${cls}</span></div>
+              <div style="white-space: nowrap; flex-shrink: 0;">เลขที่: <span class="info-val num-tabular">${s.no || "-"}</span></div>
             </div>
             <div class="info-row">
-              <div>น้ำหนัก: <span class="info-val num-tabular">${s.weight || "-"}</span> กก.</div>
-              <div>ส่วนสูง: <span class="info-val num-tabular">${s.height || "-"}</span> ซม.</div>
-              <div>
-                เพศ: &nbsp;
-                <span class="checkbox-box" style="color: ${isMale ? '#000' : '#888'};">
-                  <span class="check-mark">${isMale ? '&#10003;' : ''}</span> ชาย
-                </span>
-                &nbsp;&nbsp;
-                <span class="checkbox-box" style="color: ${!isMale ? '#000' : '#888'};">
-                  <span class="check-mark">${!isMale ? '&#10003;' : ''}</span> หญิง
-                </span>
+              <div style="white-space: nowrap;">น้ำหนัก: <span class="info-val num-tabular">${s.weight || "-"}</span> กก.</div>
+              <div style="white-space: nowrap;">ส่วนสูง: <span class="info-val num-tabular">${s.height || "-"}</span> ซม.</div>
+              <div class="gender-group">
+                <span>เพศ:</span>
+                <span class="checkbox-box" style="color: ${isMale ? '#000' : '#888'};"><span class="check-mark">${isMale ? '&#10003;' : ''}</span><span>ชาย</span></span>
+                <span class="checkbox-box" style="color: ${!isMale ? '#000' : '#888'};"><span class="check-mark">${!isMale ? '&#10003;' : ''}</span><span>หญิง</span></span>
               </div>
             </div>
           </div>
@@ -1294,12 +1300,12 @@
                 <td class="cell-data"><span class="score-badge">${getScoreLabel(s.s8)}</span></td>
               </tr>
               <tr class="border-top-thick">
-                <td class="cell-label">ค่าดัชนีมวลกาย</td>
-                <td colspan="2" class="cell-data num-tabular" style="font-size: 14px; font-weight: 700;">${bmiVal}</td>
-                <td colspan="2" class="cell-label">ดัชนีมวลกาย (BMI)</td>
-                <td class="cell-data" style="font-size: 13.5px; font-weight: 700;">${s.bmiDesc || "-"}</td>
-                <td class="cell-label">สรุปสมรรถภาพ</td>
-                <td colspan="2" class="cell-data" style="font-size: 13px; font-weight: 700;">${s.summary || "-"}</td>
+                <td colspan="2" class="cell-label" style="white-space: nowrap;">ค่าดัชนีมวลกาย</td>
+                <td class="cell-data num-tabular" style="font-size: 14px; font-weight: 700; white-space: nowrap;">${bmiVal}</td>
+                <td colspan="2" class="cell-label" style="white-space: nowrap;">ดัชนีมวลกาย (BMI)</td>
+                <td class="cell-data" style="font-size: 12.5px; font-weight: 700; white-space: nowrap;">${s.bmiDesc || "-"}</td>
+                <td class="cell-label" style="white-space: nowrap;">สรุปสมรรถภาพ</td>
+                <td colspan="2" class="cell-data" style="font-size: 13px; font-weight: 700; white-space: nowrap;">${s.summary || "-"}</td>
               </tr>
             </tbody>
           </table>
