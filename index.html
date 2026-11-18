@@ -736,8 +736,8 @@
           <label class="form-label" for="sheet-url">ลิงก์ Google Sheets:</label>
           <div style="display: flex; gap: 6px;">
             <input type="text" id="sheet-url" class="input-field" 
-              placeholder="https://docs.google.com/spreadsheets/d/..."
-              value="https://docs.google.com/spreadsheets/d/1TngCWO0Is24LydPGHIR0KBZ1suHKnQYKNQ-CDzYFVSg/edit?usp=sharing">
+              placeholder="วางลิงก์ Google Sheets (คัดลอกจากปุ่มแชร์) ที่นี่..."
+              value="">
             <button class="btn btn-accent" onclick="fetchGoogleSheet()" style="white-space: nowrap;">
               ดึงข้อมูล
             </button>
@@ -787,7 +787,7 @@
           </div>
           <div>
             <label class="form-label">ระดับชั้น / ห้อง:</label>
-            <input type="text" id="meta-class" class="input-field" style="font-size: 12px; padding: 6px 10px;" value="ม.4/1" oninput="updateCurrentSlip()">
+            <input type="text" id="meta-class" class="input-field" style="font-size: 12px; padding: 6px 10px;" value="" placeholder="ระบบจะดึงให้อัตโนมัติ" oninput="updateCurrentSlip()">
           </div>
         </div>
       </section>
@@ -859,7 +859,7 @@
               ก่อนหน้า
             </button>
             <span id="preview-current-idx" style="font-size: 12.5px; font-weight: 600; color: var(--ink-secondary); padding: 0 4px;" class="num-tabular">
-              คนปัจจุบัน: 1 / 15
+              คนปัจจุบัน: 0 / 0
             </span>
             <button class="btn btn-secondary btn-sm" onclick="nextStudent()" title="คนถัดไป">
               ถัดไป
@@ -885,7 +885,18 @@
 
         <!-- Live Slip Preview Stage -->
         <div class="preview-canvas">
-          <div id="live-a5-slip" class="a5-slip">
+          <div id="preview-empty-state" style="text-align: center; padding: 64px 28px; max-width: 440px; color: var(--ink-secondary);">
+            <div style="width: 48px; height: 48px; margin: 0 auto 14px; border-radius: 12px; background: #ffffff; border: 1px solid var(--border-hairline); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(15,23,42,0.05);">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 13H8"/><path d="M16 13h-2"/><path d="M16 17H8"/></svg>
+            </div>
+            <div style="font-family: 'Prompt', sans-serif; font-size: 15px; font-weight: 600; color: var(--ink-primary); margin-bottom: 6px;">
+              พร้อมรับข้อมูลสมรรถภาพทางกาย
+            </div>
+            <p style="font-size: 13px; color: var(--ink-muted); line-height: 1.6; margin: 0;">
+              วางลิงก์ Google Sheets (จากปุ่มแชร์) ในช่องด้านซ้ายแล้วกด <b>"ดึงข้อมูล"</b> หรืออัปโหลดไฟล์ Excel เพื่อดูตัวอย่างใบรายงาน A5 และสั่งพิมพ์
+            </p>
+          </div>
+          <div id="live-a5-slip" class="a5-slip" style="display: none;">
             
             <!-- Slip Header -->
             <div class="slip-header">
@@ -1081,9 +1092,15 @@
     function renderStudentList() {
       const tbody = document.getElementById('student-tbody');
       if (!students || students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--ink-muted); padding: 24px;">ไม่พบข้อมูลนักเรียน</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--ink-muted); padding: 28px 14px; line-height: 1.6;">ยังไม่มีข้อมูลนักเรียน<br>กรุณาวางลิงก์ Google Sheets แล้วกดดึงข้อมูล หรืออัปโหลดไฟล์ Excel</td></tr>`;
+        document.getElementById('total-count').innerText = 0;
+        document.getElementById('header-student-count').innerText = '0 คน';
+        const chkAll = document.getElementById('check-all');
+        if (chkAll) chkAll.checked = false;
         return;
       }
+      const chkAll = document.getElementById('check-all');
+      if (chkAll) chkAll.checked = students.every(s => s.checked);
 
       let html = '';
       students.forEach((s, idx) => {
@@ -1157,10 +1174,19 @@
     }
 
     function updateCurrentSlip() {
-      if (!students || students.length === 0 || !students[currentIndex]) return;
+      const emptyState = document.getElementById('preview-empty-state');
+      const liveSlip = document.getElementById('live-a5-slip');
+      if (!students || students.length === 0 || !students[currentIndex]) {
+        if (emptyState) emptyState.style.display = 'block';
+        if (liveSlip) liveSlip.style.display = 'none';
+        document.getElementById('preview-current-idx').innerText = 'คนปัจจุบัน: 0 / 0';
+        return;
+      }
+      if (emptyState) emptyState.style.display = 'none';
+      if (liveSlip) liveSlip.style.display = 'block';
       const s = students[currentIndex];
       const school = document.getElementById('meta-school').value || "โรงเรียนพระหฤทัยเชียงใหม่";
-      const cls = document.getElementById('meta-class').value || "ม.4/1";
+      const cls = document.getElementById('meta-class').value || "-";
 
       document.getElementById('preview-current-idx').innerText = `คนปัจจุบัน: ${currentIndex + 1} / ${students.length}`;
       document.getElementById('slip-school-class').innerHTML = `${school} &bull; ชั้น${cls}`;
@@ -1872,7 +1898,9 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      loadSampleData();
+      renderStudentList();
+      updateSelectionCounts();
+      updateCurrentSlip();
     });
   </script>
 
