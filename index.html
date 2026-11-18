@@ -299,16 +299,17 @@
     }
     .data-table th {
       background: var(--surface-subtle);
-      padding: 8px 10px;
+      padding: 8px 8px;
       font-weight: 600;
       color: var(--ink-secondary);
       border-bottom: 1px solid var(--border-hairline);
       position: sticky;
       top: 0;
       z-index: 10;
+      white-space: nowrap;
     }
     .data-table td {
-      padding: 7px 10px;
+      padding: 7px 8px;
       border-bottom: 1px solid #f1f5f9;
       color: var(--ink-primary);
     }
@@ -797,10 +798,10 @@
             <thead>
               <tr>
                 <th style="width: 32px; text-align: center;"><input type="checkbox" id="check-all" checked onchange="toggleCheckAll(this.checked)"></th>
-                <th style="width: 44px;" class="num-tabular">เลขที่</th>
+                <th style="width: 50px; text-align: center; white-space: nowrap;" class="num-tabular">เลขที่</th>
                 <th>ชื่อ - นามสกุล</th>
-                <th>เพศ</th>
-                <th style="width: 46px; text-align: center;">ดูใบ A5</th>
+                <th style="width: 44px; white-space: nowrap;">เพศ</th>
+                <th style="width: 58px; text-align: center; white-space: nowrap;">ดูใบ A5</th>
               </tr>
             </thead>
             <tbody id="student-tbody">
@@ -1004,7 +1005,7 @@
 
     function detectGender(name) {
       const n = (name || "").trim();
-      if (n.startsWith("นางสาว") || n.startsWith("น.ส.") || n.startsWith("ด.ญ.") || n.startsWith("เด็กหญิง") || n.includes("หญิง")) {
+      if (n.startsWith("นางสาว") || n.startsWith("น.ส.") || n.startsWith("นส.") || n.startsWith("ด.ญ.") || n.startsWith("ดญ.") || n.startsWith("เด็กหญิง") || n.includes("หญิง")) {
         return "female";
       }
       return "male";
@@ -1076,9 +1077,9 @@
             <td style="text-align: center;">
               <input type="checkbox" ${s.checked ? 'checked' : ''} onchange="toggleStudentCheck(${idx}, this.checked)">
             </td>
-            <td class="num-tabular"><b>${s.no || (idx + 1)}</b></td>
+            <td class="num-tabular" style="text-align: center;"><b>${s.no || (idx + 1)}</b></td>
             <td>${s.name}</td>
-            <td>${genderTag}</td>
+            <td style="white-space: nowrap;">${genderTag}</td>
             <td style="text-align: center;">
               <button class="btn btn-secondary btn-sm" onclick="selectStudentPreview(${idx})" style="padding: 2px 8px; font-size: 11px;">ดู</button>
             </td>
@@ -1587,9 +1588,19 @@
           if (mSchool) schoolName = mSchool[0];
           else schoolName = row.find(c => c.includes('โรงเรียน')) || schoolName;
         }
-        if (rowStr.includes('ห้อง') || rowStr.includes('ม.')) {
-          const mClass = rowStr.match(/ห้อง\s*([มM]\.?[0-9]+(?:\/[0-9]+)?)/i) || rowStr.match(/([มM]\.?[0-9]+(?:\/[0-9]+)?)/i);
-          if (mClass) className = mClass[1].trim();
+        if (rowStr.includes('ห้อง') || rowStr.includes('ชั้น') || /[ปมอPMK]\.?\s*[0-9]/i.test(rowStr)) {
+          const mClass =
+            rowStr.match(/ห้อง\s*([ปมอPMK]\.?\s*[0-9]+(?:\s*\/\s*[0-9]+)?)/i) ||
+            rowStr.match(/([ปมอPMK]\.\s*[0-9]+(?:\s*\/\s*[0-9]+)?)/i) ||
+            rowStr.match(/ห้อง\s*([^\s,]+)/);
+          if (mClass) {
+            className = mClass[1].replace(/\s+/g, '').trim();
+          } else {
+            const mPrathom = rowStr.match(/ประถมศึกษาปีที่\s*([0-9]+)/);
+            const mMatthayom = rowStr.match(/มัธยมศึกษาปีที่\s*([0-9]+)/);
+            if (mPrathom) className = `ป.${mPrathom[1]}`;
+            else if (mMatthayom) className = `ม.${mMatthayom[1]}`;
+          }
         }
         if (row.some(c => c.includes('เลขที่')) && row.some(c => c.includes('ชื่อ'))) {
           headerRowIdx = i;
