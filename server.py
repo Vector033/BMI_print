@@ -23,6 +23,45 @@ class AppRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == '/api/sheets':
+            query = urllib.parse.parse_qs(parsed.query)
+            sheet_id = query.get('id', [''])[0].strip()
+            if not re.match(r'^[a-zA-Z0-9_-]{10,120}$', sheet_id):
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': False, 'error': 'Invalid Google Sheet ID'}).encode('utf-8'))
+                return
+            try:
+                html_url = f'https://docs.google.com/spreadsheets/d/{sheet_id}/htmlview'
+                req = urllib.request.Request(
+                    html_url,
+                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                )
+                with urllib.request.urlopen(req, timeout=12) as response:
+                    html = response.read().decode('utf-8', errors='replace')
+                tabs = []
+                seen = set()
+                for m in re.finditer(r'items\.push\(\{name:\s*"((?:[^"\\]|\\.)*)",\s*pageUrl:[^}]+?gid:\s*"(\d+)"', html):
+                    raw_name, gid = m.group(1), m.group(2)
+                    try:
+                        name = json.loads(f'"{raw_name}"')
+                    except Exception:
+                        name = raw_name
+                    if gid not in seen:
+                        seen.add(gid)
+                        tabs.append({'name': name, 'gid': gid})
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': True, 'sheetId': sheet_id, 'tabs': tabs}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': False, 'error': str(e)}).encode('utf-8'))
+            return
+
         if parsed.path == '/api/fetch-sheet':
             query = urllib.parse.parse_qs(parsed.query)
             sheet_url = query.get('url', [''])[0].strip()

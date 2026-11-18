@@ -748,8 +748,25 @@ html_code = f'''<!DOCTYPE html>
             </button>
           </div>
           <p style="font-size: 11px; color: var(--ink-muted); margin-top: 4px;">
-            * รองรับทั้งลิงก์สาธารณะและสิทธิ์ "ทุกคนที่มีลิงก์มีสิทธิ์ดู"
+            * วางลิงก์ไฟล์หลักเพียงครั้งเดียว ระบบจะดึงทุกห้อง (แท็บ) มาให้เลือกอัตโนมัติ
           </p>
+
+          <!-- Multi-Tab / Room Dropdown -->
+          <div id="sheet-tab-bar" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-hairline);">
+            <label class="form-label" for="sheet-tab-select" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>เลือกห้องเรียน / แท็บในไฟล์:</span>
+              <span id="sheet-tab-count" class="num-tabular" style="font-size: 11px; color: var(--accent); font-weight: 600;"></span>
+            </label>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <select id="sheet-tab-select" class="input-field" style="font-size: 12.5px; padding: 6px 10px; font-weight: 500; cursor: pointer; background: #ffffff;" onchange="onSheetTabChange()"></select>
+              <button class="btn btn-secondary btn-sm" onclick="switchAdjacentTab(-1)" title="ห้องก่อนหน้า" style="padding: 6px 8px; flex-shrink: 0;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="switchAdjacentTab(1)" title="ห้องถัดไป" style="padding: 6px 8px; flex-shrink: 0;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div style="text-align: center; margin: 12px 0 10px; font-size: 11.5px; color: var(--ink-muted); position: relative;">
@@ -1052,6 +1069,7 @@ html_code = f'''<!DOCTYPE html>
         {{ no: "14", name: "นางสาว เบญญา คายแหง", t1: "13.3", s1: "3", t2: "19", s2: "3", t3: "30", s3: "3", t4: "19.0", s4: "5", t5: "11.1", s5: "3", t6: "25.5", s6: "3", t7: "8.7", s7: "3", t8: "154", s8: "3", weight: "45", height: "160", bmi: "17.58", bmiDesc: "สมส่วน", summary: "ปานกลาง (รวม 26 คะแนน)", checked: true }},
         {{ no: "15", name: "นางสาว ชนันธร เที่ยงอยู่", t1: "12.7", s1: "4", t2: "24", s2: "3", t3: "36", s3: "4", t4: "17.2", s4: "4", t5: "10.4", s5: "4", t6: "30.0", s6: "3", t7: "8.2", s7: "4", t8: "165", s8: "4", weight: "59", height: "169", bmi: "20.66", bmiDesc: "สมส่วน", summary: "ดี (รวม 30 คะแนน)", checked: true }}
       ];
+      hideSheetTabBar();
       setStudents(sample, "โรงเรียนพระหฤทัยเชียงใหม่", "ม.4/1");
     }}
 
@@ -1434,8 +1452,161 @@ html_code = f'''<!DOCTYPE html>
     }}
 
     // ==========================================
-    // DATA INGESTION (JSONP + File Drag & Drop)
+    // DATA INGESTION (MULTI-TAB JSONP + EXCEL)
     // ==========================================
+    let currentSourceType = null; // 'gsheet' | 'excel' | null
+    let currentSheetId = null;
+    let currentSheetTabs = [];
+    let currentWorkbook = null;
+
+    function formatTabLabel(name) {{
+      const m = String(name || '').trim().match(/^([pmkPMK])(\\d)(\\d{{2}})$/);
+      if (m) {{
+        const prefix = m[1].toLowerCase() === 'p' ? 'ป.' : (m[1].toLowerCase() === 'm' ? 'ม.' : 'อ.');
+        const grade = m[2];
+        const room = parseInt(m[3], 10);
+        return `${{prefix}}${{grade}}/${{room}} (${{name}})`;
+      }}
+      return String(name || '');
+    }}
+
+    function extractFriendlyClassFromTabName(name) {{
+      const m = String(name || '').trim().match(/^([pmkPMK])(\\d)(\\d{{2}})$/);
+      if (m) {{
+        const prefix = m[1].toLowerCase() === 'p' ? 'ป.' : (m[1].toLowerCase() === 'm' ? 'ม.' : 'อ.');
+        return `${{prefix}}${{m[2]}}/${{parseInt(m[3], 10)}}`;
+      }}
+      return null;
+    }}
+
+    function renderSheetTabBar(tabs, activeValue) {{
+      const bar = document.getElementById('sheet-tab-bar');
+      const select = document.getElementById('sheet-tab-select');
+      const countEl = document.getElementById('sheet-tab-count');
+      if (!tabs || tabs.length === 0) {{
+        bar.style.display = 'none';
+        return;
+      }}
+      select.innerHTML = '';
+      tabs.forEach(t => {{
+        const opt = document.createElement('option');
+        opt.value = t.gid;
+        opt.dataset.tabName = t.name;
+        opt.textContent = formatTabLabel(t.name);
+        select.appendChild(opt);
+      }});
+      if (activeValue !== null && activeValue !== undefined) {{
+        select.value = String(activeValue);
+      }}
+      countEl.textContent = `พบ ${{tabs.length}} ห้อง`;
+      bar.style.display = 'block';
+    }}
+
+    function hideSheetTabBar() {{
+      const bar = document.getElementById('sheet-tab-bar');
+      if (bar) bar.style.display = 'none';
+      currentSourceType = null;
+      currentSheetId = null;
+      currentSheetTabs = [];
+      currentWorkbook = null;
+    }}
+
+    function switchAdjacentTab(delta) {{
+      const select = document.getElementById('sheet-tab-select');
+      if (!select || select.options.length === 0) return;
+      const nextIdx = select.selectedIndex + delta;
+      if (nextIdx >= 0 && nextIdx < select.options.length) {{
+        select.selectedIndex = nextIdx;
+        onSheetTabChange();
+      }}
+    }}
+
+    async function onSheetTabChange() {{
+      const select = document.getElementById('sheet-tab-select');
+      if (!select || select.selectedIndex < 0) return;
+      const opt = select.options[select.selectedIndex];
+      const val = opt.value;
+      const tabName = opt.dataset.tabName || opt.textContent;
+      const fallbackClass = extractFriendlyClassFromTabName(tabName);
+
+      if (currentSourceType === 'gsheet' && currentSheetId) {{
+        showModal("กำลังเปลี่ยนห้องเรียน...", `กำลังดึงข้อมูลห้อง ${{formatTabLabel(tabName)}}`);
+        updateModalProgress(45, "กำลังดาวน์โหลดข้อมูลแท็บที่เลือก...");
+        try {{
+          await loadGoogleSheetTab(currentSheetId, val, fallbackClass);
+          hideModal();
+        }} catch (err) {{
+          hideModal();
+          alert("ไม่สามารถดึงข้อมูลห้องที่เลือกได้ กรุณาลองใหม่อีกครั้งครับ");
+        }}
+      }} else if (currentSourceType === 'excel' && currentWorkbook) {{
+        const worksheet = currentWorkbook.Sheets[val];
+        if (worksheet) {{
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, {{ header: 1, defval: '' }});
+          parseRowsArray(rawRows, fallbackClass);
+        }}
+      }}
+    }}
+
+    async function fetchSheetTabList(sheetId) {{
+      try {{
+        const resp = await fetch(`/api/sheets?id=${{encodeURIComponent(sheetId)}}`);
+        if (resp.ok) {{
+          const data = await resp.json();
+          if (data && data.success && Array.isArray(data.tabs) && data.tabs.length > 0) {{
+            return data.tabs;
+          }}
+        }}
+      }} catch (e) {{
+        console.log("Sheet tab discovery API unavailable:", e);
+      }}
+      return [];
+    }}
+
+    async function loadGoogleSheetTab(sheetId, gid, fallbackClassName = null) {{
+      const res = await new Promise((resolve, reject) => {{
+        const cbName = 'gviz_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        const script = document.createElement('script');
+        let gvizUrl = `https://docs.google.com/spreadsheets/d/${{sheetId}}/gviz/tq?tqx=responseHandler:${{cbName}}`;
+        if (gid) gvizUrl += `&gid=${{gid}}`;
+
+        const timeout = setTimeout(() => {{
+          cleanup();
+          reject(new Error("Timeout"));
+        }}, 12000);
+
+        function cleanup() {{
+          clearTimeout(timeout);
+          if (script.parentNode) script.parentNode.removeChild(script);
+          delete window[cbName];
+        }}
+
+        window[cbName] = function(data) {{
+          cleanup();
+          resolve(data);
+        }};
+
+        script.onerror = function() {{
+          cleanup();
+          reject(new Error("Script error"));
+        }};
+
+        script.src = gvizUrl;
+        document.body.appendChild(script);
+      }});
+
+      if (res && res.status === 'ok' && res.table) {{
+        updateModalProgress(80, "กำลังแยกข้อมูลนักเรียน...");
+        const headers = res.table.cols.map(col => col.label || '');
+        const dataRows = res.table.rows.map(r => {{
+          return r.c ? r.c.map(cell => (cell && cell.v !== null && cell.v !== undefined) ? String(cell.v) : '') : [];
+        }});
+        parseRowsArray([headers, ...dataRows], fallbackClassName);
+        return true;
+      }}
+      throw new Error("Invalid gviz table response");
+    }}
+
     async function fetchGoogleSheet() {{
       const url = document.getElementById('sheet-url').value.trim();
       if (!url) {{
@@ -1443,58 +1614,41 @@ html_code = f'''<!DOCTYPE html>
         return;
       }}
 
-      showModal("กำลังดึงข้อมูลจาก Google Sheets...", "กำลังเชื่อมต่อไปยัง Google Sheets");
-      updateModalProgress(30, "กำลังดาวน์โหลดข้อมูล...");
+      showModal("กำลังดึงข้อมูลจาก Google Sheets...", "กำลังเชื่อมต่อและค้นหารายชื่อห้องทั้งหมด");
+      updateModalProgress(25, "กำลังอ่านรายชื่อแท็บ/ห้องเรียน...");
 
       const sheetIdMatch = url.match(/\\/spreadsheets\\/d\\/([a-zA-Z0-9-_]+)/);
       const gidMatch = url.match(/[#&?]gid=([0-9]+)/);
 
       if (sheetIdMatch) {{
         const sheetId = sheetIdMatch[1];
-        const gid = gidMatch ? gidMatch[1] : null;
+        const urlGid = gidMatch ? gidMatch[1] : null;
 
         try {{
-          const res = await new Promise((resolve, reject) => {{
-            const cbName = 'gviz_cb_' + Date.now();
-            const script = document.createElement('script');
-            let gvizUrl = `https://docs.google.com/spreadsheets/d/${{sheetId}}/gviz/tq?tqx=responseHandler:${{cbName}}`;
-            if (gid) gvizUrl += `&gid=${{gid}}`;
+          // Step 1: Discover all tabs in the workbook via /api/sheets
+          const tabs = await fetchSheetTabList(sheetId);
+          let targetGid = urlGid;
+          let fallbackClass = null;
 
-            const timeout = setTimeout(() => {{
-              cleanup();
-              reject(new Error("Timeout"));
-            }}, 12000);
+          if (tabs.length > 0) {{
+            currentSourceType = 'gsheet';
+            currentSheetId = sheetId;
+            currentSheetTabs = tabs;
+            currentWorkbook = null;
 
-            function cleanup() {{
-              clearTimeout(timeout);
-              if (script.parentNode) script.parentNode.removeChild(script);
-              delete window[cbName];
-            }}
-
-            window[cbName] = function(data) {{
-              cleanup();
-              resolve(data);
-            }};
-
-            script.onerror = function() {{
-              cleanup();
-              reject(new Error("Script error"));
-            }};
-
-            script.src = gvizUrl;
-            document.body.appendChild(script);
-          }});
-
-          if (res && res.status === 'ok' && res.table) {{
-            updateModalProgress(70, "กำลังแยกข้อมูลนักเรียน...");
-            const headers = res.table.cols.map(col => col.label || '');
-            const dataRows = res.table.rows.map(r => {{
-              return r.c ? r.c.map(cell => (cell && cell.v !== null && cell.v !== undefined) ? String(cell.v) : '') : [];
-            }});
-            parseRowsArray([headers, ...dataRows]);
-            hideModal();
-            return;
+            const matchedTab = urlGid ? tabs.find(t => String(t.gid) === String(urlGid)) : tabs[0];
+            const activeTab = matchedTab || tabs[0];
+            targetGid = activeTab.gid;
+            fallbackClass = extractFriendlyClassFromTabName(activeTab.name);
+            renderSheetTabBar(tabs, targetGid);
+          }} else {{
+            hideSheetTabBar();
           }}
+
+          updateModalProgress(55, "กำลังดาวน์โหลดข้อมูลนักเรียน...");
+          await loadGoogleSheetTab(sheetId, targetGid, fallbackClass);
+          hideModal();
+          return;
         }} catch (jsonpErr) {{
           console.warn("JSONP attempt failed, trying fallback...", jsonpErr);
         }}
@@ -1548,15 +1702,30 @@ html_code = f'''<!DOCTYPE html>
       reader.onload = function(e) {{
         const data = e.target.result;
         if (ext === 'csv') {{
+          hideSheetTabBar();
           const decoder = new TextDecoder('utf-8');
           const csvText = typeof data === 'string' ? data : decoder.decode(data);
           parseCsvString(csvText);
         }} else {{
           const workbook = XLSX.read(data, {{ type: 'array' }});
-          const firstSheetName = workbook.SheetNames[0];
+          const sheetNames = workbook.SheetNames || [];
+          if (sheetNames.length === 0) {{
+            alert("ไม่พบข้อมูลชีตในไฟล์ Excel ครับ");
+            return;
+          }}
+          const firstSheetName = sheetNames[0];
+          if (sheetNames.length > 1) {{
+            currentSourceType = 'excel';
+            currentWorkbook = workbook;
+            currentSheetId = null;
+            currentSheetTabs = sheetNames.map(n => ({{ name: n, gid: n }}));
+            renderSheetTabBar(currentSheetTabs, firstSheetName);
+          }} else {{
+            hideSheetTabBar();
+          }}
           const worksheet = workbook.Sheets[firstSheetName];
           const rawRows = XLSX.utils.sheet_to_json(worksheet, {{ header: 1, defval: '' }});
-          parseRowsArray(rawRows);
+          parseRowsArray(rawRows, extractFriendlyClassFromTabName(firstSheetName));
         }}
       }};
 
@@ -1574,14 +1743,14 @@ html_code = f'''<!DOCTYPE html>
       parseRowsArray(rawRows);
     }}
 
-    function parseRowsArray(rows) {{
+    function parseRowsArray(rows, defaultClassName = null) {{
       if (!rows || rows.length === 0) {{
         alert("ไม่พบข้อมูลในไฟล์ครับ");
         return;
       }}
 
       let schoolName = "โรงเรียนพระหฤทัยเชียงใหม่";
-      let className = "ม.4/1";
+      let className = defaultClassName || "ม.4/1";
       let headerRowIdx = -1;
 
       for (let i = 0; i < Math.min(rows.length, 10); i++) {{
@@ -1674,7 +1843,9 @@ html_code = f'''<!DOCTYPE html>
 
         if (!rawName || rawName.includes('สรุป') || rawName.includes('ทั้งหมด')) continue;
 
-        const fullName = rawSurname ? `${{rawName}} ${{rawSurname}}`.trim() : rawName;
+        const cleanSurname = /^[-–—\\s]+$/.test(rawSurname) ? '' : rawSurname;
+        const cleanName = rawName.replace(/\\s+[-–—]+$/, '').trim();
+        const fullName = cleanSurname ? `${{cleanName}} ${{cleanSurname}}`.trim() : cleanName;
 
         const sObj = {{
           no: rawNo,
